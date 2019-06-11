@@ -1,0 +1,11 @@
+SELECT ?predicate ?object (COUNT(?predicate) AS ?count) (GROUP_CONCAT(DISTINCT ?subject; SEPARATOR=", ") AS ?member) WHERE {
+  VALUES ?subject {
+    %s
+  }
+  ?subject ?predicate ?object.
+  MINUS { ?person schema:description ?object. }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+}
+GROUP BY ?predicate ?object
+HAVING (?count > 1)
+ORDER BY DESC(?count)
