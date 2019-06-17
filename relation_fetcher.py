@@ -7,11 +7,22 @@ from redis import Redis
 from wikidata_endpoint import WikidataEndpoint, WikidataEndpointConfiguration
 
 
+class NullDatabase:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def sadd(self, *args, **kwargs):
+        pass
+
+    def save(self, *args, **kwargs):
+        pass
+
+
 class RelationFetcher:
 
-    def __init__(self, wikidata_ids, endpoint=None):
+    def __init__(self, wikidata_ids, endpoint=None, redis_config=None):
         self.wikidata_ids = wikidata_ids
-        self.redis = Redis(host='localhost', port=6379)
+        self.redis = NullDatabase() if not redis_config else Redis(**redis_config)
         self.endpoint = endpoint or WikidataEndpoint(
             WikidataEndpointConfiguration(Path("resources/wikidata_endpoint_config.ini")))
 
@@ -20,7 +31,7 @@ class RelationFetcher:
         with self.endpoint.request() as request:
             for results in request.post(query):
                 subject, predicate, object_ = [result.split('/entity/')[-1] for result in results.values()]
-                yield (subject, predicate, object_)
+                yield subject, predicate, object_
 
     async def fetch(self):
         relations_entity_map = defaultdict(set)
@@ -36,4 +47,3 @@ class RelationFetcher:
 
     def __del__(self):
         self.redis.save()
-
