@@ -1,19 +1,7 @@
-from argparse import ArgumentParser
-from pathlib import Path
-from collections import defaultdict
-from aiostream import stream
 import asyncio
+from argparse import ArgumentParser
 
-from wikidata_endpoint import WikidataEndpoint, WikidataEndpointConfiguration
-
-
-async def get_relations(wikidata_id: int, endpoint: WikidataEndpoint):
-    query = open('resources/get_relations.rq').read() % f'wd:Q{wikidata_id}'
-
-    with endpoint.request() as request:
-        for results in request.post(query):
-            subject, predicate, object_ = [result.split('/entity/')[-1] for result in results.values()]
-            yield (subject, predicate, object_)
+from relation_fetcher import RelationFetcher
 
 
 async def main():
@@ -21,15 +9,8 @@ async def main():
     parser.add_argument('wikidata_ids', metavar='N', type=int, nargs='+')
     args = parser.parse_args()
     wikidata_ids = args.wikidata_ids
-    endpoint = WikidataEndpoint(WikidataEndpointConfiguration(Path("resources/wikidata_endpoint_config.ini")))
-
-    relations_entity_map = defaultdict(set)
-
-    async with stream.chain(
-            *[get_relations(wikidata_id, endpoint) for wikidata_id in wikidata_ids]).stream() as relations:
-        async for relation in relations:
-            subject, predicate, object_ = relation
-            relations_entity_map[(predicate, object_)].add(subject)
+    relation_fetcher = RelationFetcher(wikidata_ids)
+    x = await relation_fetcher.fetch()
 
 
 if __name__ == '__main__':
