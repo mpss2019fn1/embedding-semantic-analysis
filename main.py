@@ -8,19 +8,16 @@ member = dict()
 DG = nx.DiGraph()
 root = 'ROOT'
 DG.add_node(root)
+stack = []
 
 
 def graph_insertion(current_set_name, root_name):
-    if member[root_name].issuperset(member[current_set_name]):
-        already_inserted = False
-        for child in DG.successors(root_name):
-            already_inserted = already_inserted or graph_insertion(current_set_name, child)
-        if not already_inserted:
-            DG.add_edge(root_name, current_set_name)
-        return True
+    sub_children = [child for child in DG.successors(root_name) if member[child].issuperset(member[current_set_name])]
+    if len(sub_children) == 0:
+        DG.add_edge(root_name, current_set_name)
     else:
-        return False
-
+        for sub_child in sub_children:
+            stack.append((current_set_name, sub_child))
 
 def main():
     parser = ArgumentParser()
@@ -38,7 +35,9 @@ def main():
             current_set_name = answer['object'].split('/Q')[-1]
             member[current_set_name] = current_set
             DG.add_node(current_set_name)
-            graph_insertion(current_set_name, root)
+            stack.append((current_set_name, root))
+            while stack:
+                graph_insertion(*stack.pop())
     print(list(DG.nodes(data=True)))
     nx.draw_networkx(DG, with_labels=True)
     plt.show()
