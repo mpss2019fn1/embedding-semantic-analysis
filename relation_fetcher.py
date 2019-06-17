@@ -30,5 +30,10 @@ class RelationFetcher:
             async for relation in relations:
                 subject, predicate, object_ = relation
                 relations_entity_map[(predicate, object_)].add(subject)
+                self.redis.sadd(f'{predicate} {object_}', subject)
 
         return relations_entity_map
+
+    def __del__(self):
+        self.redis.save()
+
