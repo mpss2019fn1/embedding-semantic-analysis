@@ -1,0 +1,11 @@
+SELECT DISTINCT ?person ?wd ?ps_ WHERE {
+  VALUES ?person {
+    %s
+  }
+  ?person ?p ?statement.
+  ?statement ?ps ?ps_.
+  ?wd wikibase:claim ?p;
+    wikibase:statementProperty ?ps.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+}
+ORDER BY (?wd) (?statement) (?ps_)

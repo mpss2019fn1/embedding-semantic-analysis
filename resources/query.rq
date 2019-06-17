@@ -7,5 +7,5 @@ SELECT ?predicate ?object (COUNT(?predicate) AS ?count) (GROUP_CONCAT(DISTINCT ?
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
 }
 GROUP BY ?predicate ?object
-HAVING (?count > 1)
+HAVING (?count > 2)
 ORDER BY DESC(?count)
