@@ -30,7 +30,7 @@ class RelationFetcher:
         query = open('resources/get_relations.rq').read() % f'wd:Q{wikidata_id}'
         with self.endpoint.request() as request:
             for results in request.post(query):
-                subject, predicate, object_ = [result.split('/entity/')[-1] for result in results.values()]
+                subject, predicate, object_ = results.values()
                 yield subject, predicate, object_
 
     async def fetch(self):

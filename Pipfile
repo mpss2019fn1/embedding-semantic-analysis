@@ -4,6 +4,8 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+jupyter = "*"
+ipykernel = "*"
 
 [packages]
 numpy = "*"
@@ -12,6 +14,7 @@ matplotlib = "*"
 requests = "*"
 aiostream = "*"
 redis = "*"
+pandas = "*"
 
 [requires]
 python_version = "3.7"

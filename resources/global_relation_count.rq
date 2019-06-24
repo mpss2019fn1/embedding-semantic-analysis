@@ -1,5 +1,5 @@
-SELECT ?predicate ?object (COUNT(?predicate) AS ?count) (GROUP_CONCAT(DISTINCT ?subject; SEPARATOR=", ") AS ?member) WHERE {
-  VALUES ?subject {
+SELECT ?predicate ?object (COUNT(?predicate) AS ?global_count) WHERE {
+  VALUES (?predicate ?object) {
     %s
   }
   ?subject ?predicate ?object.
@@ -7,5 +7,4 @@ SELECT ?predicate ?object (COUNT(?predicate) AS ?count) (GROUP_CONCAT(DISTINCT ?
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
 }
 GROUP BY ?predicate ?object
-HAVING (?count > 2)
-ORDER BY DESC(?count)
+ORDER BY DESC (?global_count)

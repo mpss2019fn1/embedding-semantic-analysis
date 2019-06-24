@@ -7,5 +7,6 @@ SELECT ?predicate ?object (COUNT(?predicate) AS ?local_count) WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
 }
 GROUP BY ?predicate ?object
+FILTER (lang(?object) = 'en')
 HAVING (?local_count > 0)
 ORDER BY DESC(?local_count)
