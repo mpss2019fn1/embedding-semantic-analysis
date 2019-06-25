@@ -1,11 +1,11 @@
-SELECT ?predicate ?object (COUNT(?predicate) AS ?local_count) WHERE {
-  VALUES ?subject {
+SELECT DISTINCT ?person ?wd ?ps_ WHERE {
+  VALUES ?person {
     %s
   }
-  ?subject ?predicate ?object.
-  MINUS { ?person schema:description ?object. }
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+  ?person ?p ?statement.
+  ?statement ?ps ?ps_.
+  ?wd wikibase:claim ?p;
+    wikibase:statementProperty ?ps.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
 }
-GROUP BY ?predicate ?object
-HAVING (?local_count > 0)
-ORDER BY DESC(?local_count)
+ORDER BY (?wd) (?statement) (?ps_)
