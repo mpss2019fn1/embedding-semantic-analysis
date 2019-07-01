@@ -8,11 +8,12 @@ async def main():
     parser = ArgumentParser()
     parser.add_argument('wikidata_ids', metavar='N', type=int, nargs='+')
     args = parser.parse_args()
-    wikidata_ids = range(10)
+    wikidata_ids = list(range(10))
 
     relation_fetcher = RelationFetcher(wikidata_ids)
     x = await relation_fetcher.fetch()
-    breakpoint()
+    for e in x:
+        print(e)
 
 
 if __name__ == '__main__':

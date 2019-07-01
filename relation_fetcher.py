@@ -1,8 +1,9 @@
 from collections import defaultdict
 from pathlib import Path
+import asyncio
 
-from aiostream import stream
 from redis import Redis
+from aiostream import stream, pipe, await_
 
 from wikidata_endpoint import WikidataEndpoint, WikidataEndpointConfiguration
 
@@ -33,17 +34,20 @@ class RelationFetcher:
                 subject, predicate, object_ = results.values()
                 yield subject, predicate, object_
 
+    def handle_relation(self, relation):
+        subject, predicate, object_ = relation
+        self.redis.sadd(f'{predicate} {object_}', subject)
+        return {(predicate, object_): {subject}}
+
     async def fetch(self):
-        relations_entity_map = defaultdict(set)
-
-        async with stream.chain(
-                *[self.get_relations(wikidata_id) for wikidata_id in self.wikidata_ids]).stream() as relations:
-            async for relation in relations:
-                subject, predicate, object_ = relation
-                relations_entity_map[(predicate, object_)].add(subject)
-                self.redis.sadd(f'{predicate} {object_}', subject)
-
-        return relations_entity_map
+        xs = (stream.iterate(range(10))
+              | pipe.map(lambda x: self.get_relations(x), await_)
+              | pipe.flatten()
+              | pipe.map(lambda x: self.handle_relation(x))
+              | pipe.reduce(lambda x, y: {key: x.get(key, set()).union(y.get(key, set())) for key in set(x).union(y)},
+                            {}))
+        ys = await xs
+        return ys
 
     def __del__(self):
         self.redis.save()
