@@ -1,7 +1,7 @@
 from collections import defaultdict
 from pathlib import Path
+import asyncio
 
-from aiostream import stream
 from redis import Redis
 
 from wikidata_endpoint import WikidataEndpoint, WikidataEndpointConfiguration
@@ -26,23 +26,17 @@ class RelationFetcher:
         self.endpoint = endpoint or WikidataEndpoint(
             WikidataEndpointConfiguration(Path("resources/wikidata_endpoint_config.ini")))
 
-    async def get_relations(self, wikidata_id: int):
+    async def get_relations(self, wikidata_id, relations_map):
         query = open('resources/get_relations.rq').read() % f'wd:Q{wikidata_id}'
         with self.endpoint.request() as request:
             for results in request.post(query):
                 subject, predicate, object_ = results.values()
-                yield subject, predicate, object_
+                relations_map[(predicate, object_)].add(subject)
+                self.redis.sadd(f'{predicate} {object_}', subject)
 
     async def fetch(self):
         relations_entity_map = defaultdict(set)
-
-        async with stream.chain(
-                *[self.get_relations(wikidata_id) for wikidata_id in self.wikidata_ids]).stream() as relations:
-            async for relation in relations:
-                subject, predicate, object_ = relation
-                relations_entity_map[(predicate, object_)].add(subject)
-                self.redis.sadd(f'{predicate} {object_}', subject)
-
+        await asyncio.gather(*map(lambda x: self.get_relations(x, relations_entity_map), self.wikidata_ids))
         return relations_entity_map
 
     def __del__(self):
