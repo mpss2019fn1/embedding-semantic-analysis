@@ -2,18 +2,19 @@ import asyncio
 from argparse import ArgumentParser
 
 from relation_fetcher import RelationFetcher
+from relation_selector import RelationSelector
 
 
 async def main():
     parser = ArgumentParser()
     parser.add_argument('wikidata_ids', metavar='N', type=int, nargs='+')
     args = parser.parse_args()
-    wikidata_ids = range(1000)
+    wikidata_ids = range(20)
 
     relation_fetcher = RelationFetcher(wikidata_ids)
-    x = await relation_fetcher.fetch()
-    for e in x:
-        print(e)
+    relation_mapping = await relation_fetcher.fetch()
+    relation_selector = RelationSelector(relation_mapping)
+    print(relation_selector.global_relation_counter())
 
 
 if __name__ == '__main__':
