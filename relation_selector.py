@@ -1,9 +1,14 @@
 from collections import Counter
 from functools import lru_cache
-from itertools import islice
+from itertools import chain, islice
 from pathlib import Path
+import logging
 
 from wikidata_endpoint import WikidataEndpoint, WikidataEndpointConfiguration
+
+
+class TimeoutException(Exception):
+    pass
 
 
 def chunk_dictionary(dictionary, chunk_size):
@@ -30,16 +35,24 @@ class RelationSelector:
     @lru_cache(maxsize=None)
     def global_relation_counter(self, chunk_size=800):
         global_count = Counter()
-        for chunk in chunk_dictionary(self.relations_mapping, chunk_size):
-            global_query = open('resources/global_relation_count.rq').read() % ' '.join(
-                f'({x[0].sparql_escape()} {x[1].sparql_escape()})' for x in chunk)
-            with self.endpoint.request() as request:
-                request_result = request.post(global_query)
-                chunk_global_counts = {(x['predicate'], x['object']): int(x['global_count'].value) for x in
-                                       request_result}
-            global_count.update(chunk_global_counts)
+        chunks = chunk_dictionary(self.relations_mapping, chunk_size)
+        while chunks:
+            timeout_chunks = []
+            for chunk in chunks:
+                global_query = open('resources/global_relation_count.rq').read() % ' '.join(
+                    f'({x[0].sparql_escape()} {x[1].sparql_escape()})' for x in chunk)
+                with self.endpoint.request() as request:
+                    try:
+                        request_result = request.post(global_query, on_timeout=lambda x: exec('raise(TimeoutException)'))
+                    except TimeoutException:
+                        logging.error("Request timeout: Will try again with smaller chunks")
+                        timeout_chunks.append(chunk_dictionary(chunk, 3))
+                        continue
+                    chunk_global_counts = {(x['predicate'], x['object']): int(x['global_count'].value) for x in
+                                           request_result}
+                global_count.update(chunk_global_counts)
+            chunks = timeout_chunks
         return global_count
 
     def score(self, relation):
         pass
-
