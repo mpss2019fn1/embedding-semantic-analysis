@@ -1,4 +1,5 @@
 from collections import Counter
+from itertools import combinations
 from functools import lru_cache
 from itertools import chain, islice
 from pathlib import Path
@@ -24,14 +25,14 @@ def chunk_dictionary(dictionary, chunk_size):
 class RelationSelector:
 
     def __init__(self, relations_mapping, endpoint=None):
-        self.relations_mapping = relations_mapping
+        self.property_mapping = relations_mapping
         self.number_entities = len(set().union(*relations_mapping.values()))
         self.endpoint = endpoint or WikidataEndpoint(
             WikidataEndpointConfiguration(Path("resources/wikidata_endpoint_config.ini")))
 
     # @lru_cache(maxsize=None)
     def relation_counter(self, threshold=1):
-        return Counter({key: len(value) for key, value in self.relations_mapping.items() if len(value) > threshold})
+        return Counter({key: len(value) for key, value in self.property_mapping.items() if len(value) > threshold})
 
     # @lru_cache(maxsize=None)
     def group_counter(self):
@@ -40,7 +41,7 @@ class RelationSelector:
     # @lru_cache(maxsize=None)
     def global_relation_counter(self, chunk_size=800):
         global_count = Counter()
-        chunks = chunk_dictionary(self.relations_mapping, chunk_size)
+        chunks = chunk_dictionary(self.property_mapping, chunk_size)
         while chunks:
             timeout_chunks = []
             for chunk in chunks:
@@ -61,15 +62,32 @@ class RelationSelector:
         return global_count
 
     def remove_unique_relations(self):
-        self.relations_mapping = {key: value for key, value in self.relations_mapping.items() if len(value) > 1}
+        self.property_mapping = {key: value for key, value in self.property_mapping.items() if len(value) > 1}
 
     def remove_rare_relations(self, threshold):
-        group_counter = self.group_counter()
-        self.relations_mapping = {key: value for key, value in self.relations_mapping.items() if
-                                  group_counter[key[0]] > threshold * self.number_entities}
+        for relation in self.group_counter():
+            properties = {key: value for key, value in self.property_mapping.items() if key[0] == relation}
+            count = sum(len(relation_targets) for property, relation_targets in properties.items())
+            if count < threshold * self.number_entities:
+                for key in properties:
+                    self.property_mapping.pop(key, None)
 
-    def remove_single_groups(self):
-        self.relations_mapping = {key: value for key, value in self.relations_mapping.items()}
+    def remove_overlapping_relation_groups(self):
+        selected_relations = [x[0] for x in self.group_counter().items() if 3 < x[1]]
+        selected_relation_group = {
+            selected_relation: {x[1] for x in self.property_mapping if x[0] == selected_relation} for
+            selected_relation in selected_relations}
+        for relation, relation_targets in selected_relation_group.items():
+            print('==========================')
+            print(relation)
+            groups = (self.property_mapping[(relation, relation_target)] for relation_target in relation_targets)
+            for (group1, label1), (group2, label2) in combinations(zip(groups, relation_targets), 2):
+                if len(group1) <= 20 or len(group2) <= 20:
+                    continue
+                overlap_coefficient_value = overlap_coefficient(group1, group2)
+                if overlap_coefficient_value == 0.0:
+                    print(label1.sparql_escape() + ' ' + label2.sparql_escape())
+                    print(f'{relation} {len(group1)} {len(group2)} {overlap_coefficient_value}')
 
     def score(self, relation):
         pass
