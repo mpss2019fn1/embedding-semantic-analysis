@@ -2,10 +2,10 @@ import asyncio
 from argparse import ArgumentParser
 from pathlib import Path
 import pickle
-from itertools import combinations
 
 from relation_fetcher import RelationFetcher
-from relation_selector import RelationSelector, overlap_coefficient
+from relation_selector import RelationSelector
+from hierachy_builder import HierachyBuilder
 
 
 async def main():
@@ -26,6 +26,9 @@ async def main():
     relation_selector.remove_rare_relations(0.1)
     print(len(relation_selector.property_mapping))
     relation_selector.remove_overlapping_relation_groups()
+    print(len(relation_selector.property_mapping))
+    hierachy_builder = HierachyBuilder(relation_selector.property_mapping, relation_selector.relation_groups())
+    hierachy_builder.build()
     breakpoint()
 
 if __name__ == '__main__':

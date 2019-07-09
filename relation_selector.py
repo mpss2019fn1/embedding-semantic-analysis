@@ -61,8 +61,8 @@ class RelationSelector:
             chunks = timeout_chunks
         return global_count
 
-    def remove_unique_relations(self):
-        self.property_mapping = {key: value for key, value in self.property_mapping.items() if len(value) > 1}
+    def remove_small_relation_groups(self, threshold):
+        self.property_mapping = {key: value for key, value in self.property_mapping.items() if len(value) > threshold}
 
     def remove_rare_relations(self, threshold):
         for relation in self.group_counter():
@@ -72,22 +72,26 @@ class RelationSelector:
                 for key in properties:
                     self.property_mapping.pop(key, None)
 
+    def remove_unique_relations(self):
+        self.remove_small_relation_groups(1)
+
     def remove_overlapping_relation_groups(self):
-        selected_relations = [x[0] for x in self.group_counter().items() if 3 < x[1]]
+        selected_relation_group = self.relation_groups()
+        for relation, relation_targets in selected_relation_group.items():
+            groups = (self.property_mapping[(relation, relation_target)] for relation_target in relation_targets)
+            for (group1, label1), (group2, label2) in combinations(zip(groups, relation_targets), 2):
+                overlap_coefficient_value = overlap_coefficient(group1, group2)
+                if overlap_coefficient_value > 0.3:
+                    removed_label, kept_label = (label1, label2) if len(group1) < len(group2) else (label2, label1)
+                    self.property_mapping.pop((relation, removed_label), None)
+                    print(f'remove smaller group after intersection: {removed_label}, kept{kept_label}')
+
+    def relation_groups(self):
+        selected_relations = self.group_counter().keys()
         selected_relation_group = {
             selected_relation: {x[1] for x in self.property_mapping if x[0] == selected_relation} for
             selected_relation in selected_relations}
-        for relation, relation_targets in selected_relation_group.items():
-            print('==========================')
-            print(relation)
-            groups = (self.property_mapping[(relation, relation_target)] for relation_target in relation_targets)
-            for (group1, label1), (group2, label2) in combinations(zip(groups, relation_targets), 2):
-                if len(group1) <= 20 or len(group2) <= 20:
-                    continue
-                overlap_coefficient_value = overlap_coefficient(group1, group2)
-                if overlap_coefficient_value == 0.0:
-                    print(label1.sparql_escape() + ' ' + label2.sparql_escape())
-                    print(f'{relation} {len(group1)} {len(group2)} {overlap_coefficient_value}')
+        return selected_relation_group
 
     def score(self, relation):
         pass
