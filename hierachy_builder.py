@@ -3,6 +3,7 @@ import typing
 
 import networkx as nx
 import matplotlib.pyplot as plt
+import mpld3
 
 
 tree = nx.DiGraph()
@@ -20,14 +21,14 @@ class HierachyBuilder:
         self.property_mapping = property_mapping
         self.relation_groups = relation_groups
         self.root_node = Node('root', {relation_source for sublist in self.property_mapping.values() for relation_source in sublist}, [])
-        tree.add_node(self.root_node.label)
+        tree.add_node(str(self.root_node.label))
 
     def build_node(self, node, property):
         relation_groups = self.property_mapping[property] & node.values
         if len(relation_groups) > 0:
             child_node = Node(property, relation_groups, [])
-            tree.add_node(child_node.label)
-            tree.add_edge(node.label, child_node.label)
+            tree.add_node(str(child_node.label))
+            tree.add_edge(str(node.label), str(child_node.label))
             node.children.append(child_node)
 
     def build(self):
@@ -39,11 +40,12 @@ class HierachyBuilder:
             children = [node.children for node in previous_nodes]
             previous_nodes = [node for sublist in children for node in sublist]
 
-        fig, ax = plt.subplots(subplot_kw=dict(axisbg='#EEEEEE'))
-        scatter = nx.draw_networkx_nodes(G, pos, ax=ax)
-        nx.draw_networkx_edges(G, pos, ax=ax)
+        pos = nx.spring_layout(tree)
+        fig, ax = plt.subplots()
+        scatter = nx.draw_networkx_nodes(tree, pos, ax=ax)
+        nx.draw_networkx_edges(tree, pos, ax=ax)
 
-        labels = G.nodes()
+        labels = tree.nodes()
         tooltip = mpld3.plugins.PointLabelTooltip(scatter, labels=labels)
         mpld3.plugins.connect(fig, tooltip)
 

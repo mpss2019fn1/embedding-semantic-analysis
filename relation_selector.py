@@ -1,11 +1,11 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from itertools import combinations
-from functools import lru_cache
-from itertools import chain, islice
+from itertools import islice
 from pathlib import Path
 import logging
 
 from wikidata_endpoint import WikidataEndpoint, WikidataEndpointConfiguration
+from wikidata_endpoint.return_types import UriReturnType
 
 
 class TimeoutException(Exception):
@@ -31,12 +31,16 @@ class RelationSelector:
             WikidataEndpointConfiguration(Path("resources/wikidata_endpoint_config.ini")))
 
     # @lru_cache(maxsize=None)
-    def relation_counter(self, threshold=1):
+    def property_counter(self, threshold=1):
+        """
+        :param threshold: values smaller then this value are discarded
+        :return: mapping from property to number of entities with this property
+        """
         return Counter({key: len(value) for key, value in self.property_mapping.items() if len(value) > threshold})
 
     # @lru_cache(maxsize=None)
     def group_counter(self):
-        return Counter(c[0] for c in self.relation_counter())
+        return Counter(c[0] for c in self.property_counter())
 
     # @lru_cache(maxsize=None)
     def global_relation_counter(self, chunk_size=800):
@@ -87,11 +91,36 @@ class RelationSelector:
                     print(f'remove smaller group after intersection: {removed_label}, kept{kept_label}')
 
     def relation_groups(self):
+        """
+        :return: mapping from predicate to connected objects
+        """
         selected_relations = self.group_counter().keys()
         selected_relation_group = {
             selected_relation: {x[1] for x in self.property_mapping if x[0] == selected_relation} for
             selected_relation in selected_relations}
         return selected_relation_group
+
+    def group_sizes(self):
+        """
+        :return: mapping from predicate to list of connected groups sizes
+        """
+        result = defaultdict(list)
+        for predicate, relation_group in self.relation_groups().items():
+            for object_ in relation_group:
+                result[predicate].append(len(self.property_mapping[(predicate, object_)]))
+        return result
+
+    def predicate_popularity(self):
+        """
+        :return: mapping from predicate to proportion of entities, which have a outgoing edge with this predicate
+        """
+        result = dict()
+        for relation in self.group_counter():
+            properties = {key: value for key, value in self.property_mapping.items() if key[0] == relation}
+            count = set.union(self.property_mapping[(property, relation_targets)] for property, relation_targets in properties.items())
+            count = len()
+            result[relation] = count
+        return Counter(result)
 
     def score(self, relation):
         pass
