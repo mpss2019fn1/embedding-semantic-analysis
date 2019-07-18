@@ -24,8 +24,14 @@ async def main():
         relation_fetcher = RelationFetcher(wikidata_ids)
         relation_mapping = await relation_fetcher.fetch()
     relation_selector = RelationSelector(relation_mapping)
+
+    #Popularity
     r = relation_selector.predicate_popularity()
-    print(len(relation_selector.property_mapping))
+    for key, value in r.most_common(10):
+        print(key, value)
+
+    r = relation_selector.group_sizes()
+
     relation_selector.remove_unique_relations()
     print(len(relation_selector.property_mapping))
     relation_selector.remove_rare_relations(0.1)

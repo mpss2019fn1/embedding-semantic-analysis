@@ -115,12 +115,20 @@ class RelationSelector:
         :return: mapping from predicate to proportion of entities, which have a outgoing edge with this predicate
         """
         result = dict()
-        for relation in self.group_counter():
-            properties = {key: value for key, value in self.property_mapping.items() if key[0] == relation}
-            count = set.union(self.property_mapping[(property, relation_targets)] for property, relation_targets in properties.items())
-            count = len()
-            result[relation] = count
+        for predicate, objects in self.relation_groups().items():
+            predicate_objects = set()
+            for object_ in objects:
+                predicate_objects = predicate_objects.union(self.property_mapping[(predicate, object_)])
+            result[predicate] = len(predicate_objects)
         return Counter(result)
+
+    def non_overlapping_entities(self, predicate):
+        result = set()
+        predicate_url = UriReturnType('http://www.wikidata.org/entity/P' + predicate)
+        relation_groups = self.relation_groups()[predicate_url]
+        for object_ in relation_groups:
+            result = result.symmetric_difference(self.property_mapping[(predicate_url, object_)])
+        return result
 
     def score(self, relation):
         pass
