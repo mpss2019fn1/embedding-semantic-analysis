@@ -1,6 +1,6 @@
 from attr import dataclass
 import typing
-
+import csv
 import networkx as nx
 import matplotlib.pyplot as plt
 import mpld3
@@ -40,16 +40,43 @@ class HierachyBuilder:
             children = [node.children for node in previous_nodes]
             previous_nodes = [node for sublist in children for node in sublist]
 
-        pos = nx.spring_layout(tree)
-        fig, ax = plt.subplots()
-        scatter = nx.draw_networkx_nodes(tree, pos, ax=ax)
-        nx.draw_networkx_edges(tree, pos, ax=ax)
+        # pos = nx.spring_layout(tree)
+        # fig, ax = plt.subplots()
+        # scatter = nx.draw_networkx_nodes(tree, pos, ax=ax)
+        # nx.draw_networkx_edges(tree, pos, ax=ax)
+        #
+        # labels = tree.nodes()
+        # tooltip = mpld3.plugins.PointLabelTooltip(scatter, labels=labels)
+        # mpld3.plugins.connect(fig, tooltip)
 
-        labels = tree.nodes()
-        tooltip = mpld3.plugins.PointLabelTooltip(scatter, labels=labels)
-        mpld3.plugins.connect(fig, tooltip)
+        # mpld3.show()
 
-        mpld3.show()
+    def save_to_file(self, filename):
+        # dfs
+        print("HERE I AM")
+        file_data = {}
+        stack = []
+        stack.append(self.root_node)
+        cluster_id = 0
+        while stack:
+            current_node = stack.pop()
+            # print(current_node.values)
+            if current_node.children and len(current_node.values) > 15:
+                for child in current_node.children:
+                    stack.append(child)
+            else:
+                print(f"labels: {current_node.label}")
+                print(f"values: {current_node.values}")
+                file_data[current_node.label] = current_node.values
+
+        w = csv.writer(open(filename, "w"))
+        for key, val in file_data.items():
+            w.writerow([key, val])
+
+
+
+
+
 
     def build_next_level(self, previous_nodes, property):
         for child_node in previous_nodes:

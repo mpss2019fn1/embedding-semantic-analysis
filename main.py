@@ -6,6 +6,7 @@ import pickle
 from relation_fetcher import RelationFetcher
 from relation_selector import RelationSelector
 from hierachy_builder import HierachyBuilder
+from evaluation_set_generator import EvaluationSetGenerator
 
 from wikidata_endpoint.return_types import UriReturnType
 
@@ -16,7 +17,7 @@ async def main():
     parser.add_argument('wikidata_ids', metavar='N', type=int, nargs='+')
     # args = open('living_people_ids.txt').read().split()
     # wikidata_ids = (arg.split('Q')[1] for arg in args)
-    wikidata_ids = range(1000)
+    wikidata_ids = range(100)
     if Path(PICKLE_FIlE).exists():
         with open(PICKLE_FIlE, 'rb') as handle:
             relation_mapping = pickle.load(handle)
@@ -33,13 +34,16 @@ async def main():
     r = relation_selector.group_sizes()
 
     relation_selector.remove_unique_relations()
-    print(len(relation_selector.property_mapping))
+    #print(len(relation_selector.property_mapping))
     relation_selector.remove_rare_relations(0.1)
-    print(len(relation_selector.property_mapping))
+    #print(len(relation_selector.property_mapping))
     relation_selector.remove_overlapping_relation_groups()
-    print(len(relation_selector.property_mapping))
+    #print(len(relation_selector.property_mapping))
     hierachy_builder = HierachyBuilder(relation_selector.property_mapping, relation_selector.relation_groups())
     hierachy_builder.build()
+    hierachy_builder.save_to_file('hierachy_leaf_data.csv')
+    task_builder = EvaluationSetGenerator(hierachy_builder)
+    task_builder.build()
     breakpoint()
 
 if __name__ == '__main__':
