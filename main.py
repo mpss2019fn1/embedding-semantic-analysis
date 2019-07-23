@@ -17,7 +17,7 @@ async def main():
     parser.add_argument('wikidata_ids', metavar='N', type=int, nargs='+')
     # args = open('living_people_ids.txt').read().split()
     # wikidata_ids = (arg.split('Q')[1] for arg in args)
-    wikidata_ids = range(100)
+    wikidata_ids = range(1000)
     if Path(PICKLE_FIlE).exists():
         with open(PICKLE_FIlE, 'rb') as handle:
             relation_mapping = pickle.load(handle)

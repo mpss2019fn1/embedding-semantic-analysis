@@ -18,6 +18,7 @@ pandas = "*"
 graphviz = "*"
 mpld3 = "*"
 holoviz = "*"
+pyyaml = "*"
 
 [requires]
 python_version = "3.7"
