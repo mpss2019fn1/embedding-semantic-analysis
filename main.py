@@ -10,16 +10,16 @@ from evaluation_set_generator import EvaluationSetGenerator
 
 from wikidata_endpoint.return_types import UriReturnType
 
-PICKLE_FIlE = 'people_relations.pickle'
+PICKLE_FILE = 'people_relations.pickle'
 
 async def main():
     parser = ArgumentParser()
     parser.add_argument('wikidata_ids', metavar='N', type=int, nargs='+')
     # args = open('living_people_ids.txt').read().split()
     # wikidata_ids = (arg.split('Q')[1] for arg in args)
-    wikidata_ids = range(1000)
-    if Path(PICKLE_FIlE).exists():
-        with open(PICKLE_FIlE, 'rb') as handle:
+    wikidata_ids = range(100)
+    if Path(PICKLE_FILE).exists():
+        with open(PICKLE_FILE, 'rb') as handle:
             relation_mapping = pickle.load(handle)
     else:
         relation_fetcher = RelationFetcher(wikidata_ids)

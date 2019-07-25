@@ -33,6 +33,7 @@ class EvaluationSetGenerator:
                     stack.append((child, level + 1))
             else:
                 # speichere die childen entsprechend in den path
+                # hier muss geprüft werden, ob es sich um eine
                 print(path_stack)
                 path = self.build_path(path_stack) + ".csv"
                 neighborhood_task_entities = [["entity", "group_id", "is_similar"]]
