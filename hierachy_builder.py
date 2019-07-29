@@ -14,13 +14,14 @@ class Node:
     label: str
     values: 'typing.Any'
     children: 'typing.Any'
+    is_root: bool = False
 
 
 class HierachyBuilder:
     def __init__(self, property_mapping, relation_groups):
         self.property_mapping = property_mapping
         self.relation_groups = relation_groups
-        self.root_node = Node('root', {relation_source for sublist in self.property_mapping.values() for relation_source in sublist}, [])
+        self.root_node = Node('root', {relation_source for sublist in self.property_mapping.values() for relation_source in sublist}, [], is_root=True)
         tree.add_node(str(self.root_node.label))
 
     def build_node(self, node, property):

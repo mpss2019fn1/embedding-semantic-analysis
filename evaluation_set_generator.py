@@ -1,16 +1,67 @@
 import csv
 import os
 
+
 class EvaluationSetGenerator:
 
     def __init__(self, graph):
         self.graph = graph
 
-    def build(self):
-        clusters = {}
-        stack = []
-        path_stack = []
+    def build_recursive1(self):
         root = self.graph.root_node
+        EvaluationSetGenerator.build_recursive(node=root, path="root")
+
+    @staticmethod
+    def build_recursive(node, path):
+        is_leaf = len(node.children) == 0 or len(node.values) <= 15
+        is_similar = True
+        cluster_id = 0
+
+
+        # pfad sieht wie folgt aus
+        # root/P/Q/P/Q
+
+        # kommen rein mit Root
+        #   | 2 Kinder
+        #       | sex(male)
+        #       | sex(female)
+
+
+        # bin ich ein Blatt? -> abspeichern
+        # reiche Elemente hoch
+        # we can chain lists
+        entities = [["entity", "group_id", "is_similar"]]
+
+        if is_leaf:
+            for entity in node.values:
+                wikidata_id = EvaluationSetGenerator.extract_wikidata_id(entity.value)
+                entities.append([wikidata_id, cluster_id, is_similar])
+        else:
+            property_entity_dict = {}
+
+            for child in node.children:
+                child_predicate = EvaluationSetGenerator.extract_wikidata_id(child.label[0].value)
+                child_object = EvaluationSetGenerator.extract_wikidata_id(child.label[1].value)
+                child_entities = EvaluationSetGenerator.build_recursive(child, path + "/" + child_predicate + "/" + child_object)
+                property_entities = property_entity_dict.get(child_predicate, None)
+                if property_entities is None:
+                    property_entities = [["entity", "group_id", "is_similar"]]
+                    property_entity_dict[child_predicate] = property_entities
+                property_entities.extend(child_entities[1:])
+
+            for predicate, predicate_entities in property_entity_dict.items():
+                EvaluationSetGenerator.save_to_file(path + '/' + predicate + ".csv", predicate_entities)
+                entities.extend(predicate_entities[1:])
+
+        EvaluationSetGenerator.save_to_file(path + ".csv", entities)
+        return entities
+
+
+    def build(self):
+        # contains nodes for depth first search. also contains node level and maybe list?
+        stack = []
+        # contains
+        path_stack = []
         # (node, level)
         stack.append((self.graph.root_node, 0))
         cluster_id = 0
@@ -25,6 +76,11 @@ class EvaluationSetGenerator:
             else:
                 path_stack.append(self.extract_wikidata_id(current_node.label[0].value))
                 path_stack.append(self.extract_wikidata_id(current_node.label[1].value))
+
+            # An dieser Stelle den kompletten Knoten wegschreiben
+            # Was ist der Pfad?
+
+            # Todo
             # refactor
             # magic number
             # müssen quasi noch eine Ebene haben
@@ -53,7 +109,8 @@ class EvaluationSetGenerator:
 
     @staticmethod
     def save_to_file(filename, content):
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        if '/' in filename:
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
         with open(filename, mode="w+") as f:
             writer = csv.writer(f)
             writer.writerows(content)

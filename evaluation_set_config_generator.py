@@ -86,11 +86,12 @@ class EvaluationSetConfigGenerator:
             for file in files:
                 if file.endswith('.csv'):
                     path = root + '/' + file
-                    # print(path)
+                    print(path)
                     split_path = path.split('/')
                     previous_category = root_category
-                    for i in range(1, len(split_path) - 2):
-                        category_key = f'{split_path[i]}({split_path[i + 1]})'
+                    for i in range(1, len(split_path) - 1):
+                        # name P123(Q666)
+                        category_key = split_path[i]
                         current_category = previous_category.categories.get(category_key, None)
                         if current_category is None:
                             current_category = Category(name=category_key, enabled=True, categories={}, tasks=[])
@@ -98,9 +99,19 @@ class EvaluationSetConfigGenerator:
                         previous_category = current_category
 
                     filename = split_path[-1].split('.csv')[0]
-                    key = f'{split_path[-2]}({filename})'
+                    key = filename
                     tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(filename, path)
-                    previous_category.categories[key] = Category(name=key, enabled=True, categories={}, tasks=tasks)
+
+
+                    deepest_category = previous_category.categories.get(key, None)
+                    if deepest_category is None:
+                        deepest_category = Category(name=key, enabled=True, categories={}, tasks=tasks)
+                        previous_category.categories[key] = deepest_category
+                    else:
+                        previous_category.categories[key].tasks.extend(tasks)
+
+
+                    # previous_category.categories[key] = Category(name=key, enabled=True, categories={}, tasks=tasks)
 
         return root_category
 
@@ -131,7 +142,7 @@ class EvaluationSetConfigGenerator:
 
 
 if __name__ == '__main__':
-    EvaluationSetConfigGenerator.build_from_file_system('root')
+    EvaluationSetConfigGenerator.build_from_file_system('__living_people_100__')
 
     # yaml.dump({'name': 'human',
     #            'enabled': True,
