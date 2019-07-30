@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 class TaskCreator(ABC):
 
     def __init__(self):
-        pass
+        self._PREFIX = ""
 
     @abstractmethod
     def process_node(self, path, node, entities):
@@ -21,6 +21,17 @@ class TaskCreator(ABC):
         with open(filename, mode="w+") as f:
             writer = csv.writer(f)
             writer.writerows(content)
+
+    def filename_from_path(self, path):
+        filename = path.split("/")[-1]
+        split_path = path.split("/")[:-1]
+        path = ""
+        if split_path:
+            path = "/".join(split_path) + "/"
+
+        path = path + self._PREFIX + "_" + filename + ".csv"
+
+        return path
 
 
 class NeighborhoodTaskCreator(TaskCreator):
@@ -39,12 +50,12 @@ class NeighborhoodTaskCreator(TaskCreator):
         for entity in entities:
             content.append([entity, cluster_id, is_similar])
 
-        filename = path.split("/")[-1]
-        split_path = path.split("/")[:-1]
-        path = ""
-        if split_path:
-            path = "/".join(split_path) + "/"
+        TaskCreator.save_to_file(self.filename_from_path(path), content)
 
-        path = path + self._PREFIX + "_" + filename + ".csv"
 
-        TaskCreator.save_to_file(path, content)
+class SimilarityTaskCreator(TaskCreator):
+    pass
+
+
+class OutlierTaskCreator(TaskCreator):
+    pass
