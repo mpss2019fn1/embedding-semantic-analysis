@@ -5,8 +5,8 @@ import os
 class HierarchyTraversal:
 
     @staticmethod
-    def traverse(graph, task_creator):
-        HierarchyTraversal._traverse(node=graph.root_node, path="root", task_creator=task_creator)
+    def traverse(hierarchy, task_creator):
+        HierarchyTraversal._traverse(node=hierarchy.root_node, path="root", task_creator=task_creator)
 
     @staticmethod
     def _traverse(node, path, task_creator):

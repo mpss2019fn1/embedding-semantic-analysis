@@ -7,11 +7,13 @@ from relation_fetcher import RelationFetcher
 from relation_selector import RelationSelector
 from hierachy_builder import HierachyBuilder
 from hierarchy_traversal import HierarchyTraversal
+from task_creator import OutlierTaskCreator
 from task_creator import NeighborhoodTaskCreator
 
 from wikidata_endpoint.return_types import UriReturnType
 
 PICKLE_FILE = 'people_relations.pickle'
+
 
 async def main():
     parser = ArgumentParser()
@@ -60,8 +62,9 @@ async def main():
     hierachy_builder.save_to_file('hierachy_leaf_data.csv')
 
     neighborhood_task_creator = NeighborhoodTaskCreator()
+    outlier_task_creator = OutlierTaskCreator(hierachy_builder, 2)
     HierarchyTraversal.traverse(hierachy_builder, neighborhood_task_creator)
-
+    HierarchyTraversal.traverse(hierachy_builder, outlier_task_creator)
     breakpoint()
 
 if __name__ == '__main__':

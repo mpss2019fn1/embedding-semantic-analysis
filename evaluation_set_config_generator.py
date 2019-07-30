@@ -3,6 +3,7 @@ from attr import dataclass
 import yaml
 import os
 
+
 @dataclass
 class TaskConfiguration:
     type: str
@@ -82,6 +83,11 @@ class EvaluationSetConfigGenerator:
         return [Task(name=f"Similarity: {task_name} (Cosine)", type="cosine_similarity", test_set=file_path),
                 Task(name=f"Similarity: {task_name} (Euclidean)", type="euclidean_similarity", test_set=file_path)]
 
+    @staticmethod
+    def create_outlier_tasks(task_name, file_path):
+        return [Task(name=f"Outlier: {task_name} (Cosine)", type="cosine_outlier_detection", test_set=file_path),
+                Task(name=f"Outlier: {task_name} (Euclidean)", type="euclidean_outlier_detection", test_set=file_path)]
+
 
     @staticmethod
     def build_category_tree(root_dir):
@@ -105,7 +111,13 @@ class EvaluationSetConfigGenerator:
 
                     filename = split_path[-1].split('.csv')[0]
                     key = filename
-                    tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(filename, path)
+
+                    if "outlier" in file:
+                        tasks = EvaluationSetConfigGenerator.create_outlier_tasks(filename, path)
+                    elif "neighborhood" in file:
+                        tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(filename, path)
+                    else:
+                        raise Exception("Never do this. filename not supported.")
 
 
                     # Kategorie, zu der das testset hinzugefügt werden soll
@@ -115,9 +127,6 @@ class EvaluationSetConfigGenerator:
                         previous_category.categories[key] = deepest_category
                     else:
                         previous_category.categories[key].tasks.extend(tasks)
-
-
-
 
         return root_category
 
@@ -148,7 +157,7 @@ class EvaluationSetConfigGenerator:
 
 
 if __name__ == '__main__':
-    EvaluationSetConfigGenerator.build_from_file_system('__living_people_100__')
+    EvaluationSetConfigGenerator.build_from_file_system('evaluation_set')
 
     # yaml.dump({'name': 'human',
     #            'enabled': True,
