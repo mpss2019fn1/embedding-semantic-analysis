@@ -16,6 +16,9 @@ class Node:
     children: 'typing.Any'
     is_root: bool = False
 
+    def is_leaf(self):
+        return len(self.children) == 0 or len(self.values) <= 15
+
 
 class HierachyBuilder:
     def __init__(self, property_mapping, relation_groups):

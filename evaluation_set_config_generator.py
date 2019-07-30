@@ -77,6 +77,11 @@ class EvaluationSetConfigGenerator:
         return [Task(name=f"Neighborhood: {task_name} (Cosine)", type="cosine_neighborhood", test_set=file_path),
                 Task(name=f"Neighborhood: {task_name} (Euclidean)", type="euclidean_neighborhood", test_set=file_path)]
 
+    @staticmethod
+    def create_similarity_tasks(task_name, file_path):
+        return [Task(name=f"Similarity: {task_name} (Cosine)", type="cosine_similarity", test_set=file_path),
+                Task(name=f"Similarity: {task_name} (Euclidean)", type="euclidean_similarity", test_set=file_path)]
+
 
     @staticmethod
     def build_category_tree(root_dir):
@@ -103,6 +108,7 @@ class EvaluationSetConfigGenerator:
                     tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(filename, path)
 
 
+                    # Kategorie, zu der das testset hinzugefügt werden soll
                     deepest_category = previous_category.categories.get(key, None)
                     if deepest_category is None:
                         deepest_category = Category(name=key, enabled=True, categories={}, tasks=tasks)
@@ -111,7 +117,7 @@ class EvaluationSetConfigGenerator:
                         previous_category.categories[key].tasks.extend(tasks)
 
 
-                    # previous_category.categories[key] = Category(name=key, enabled=True, categories={}, tasks=tasks)
+
 
         return root_category
 

@@ -6,7 +6,8 @@ import pickle
 from relation_fetcher import RelationFetcher
 from relation_selector import RelationSelector
 from hierachy_builder import HierachyBuilder
-from evaluation_set_generator import EvaluationSetGenerator
+from hierarchy_traversal import HierarchyTraversal
+from task_creator import NeighborhoodTaskCreator
 
 from wikidata_endpoint.return_types import UriReturnType
 
@@ -57,9 +58,10 @@ async def main():
     hierachy_builder = HierachyBuilder(relation_selector.property_mapping, relation_selector.relation_groups())
     hierachy_builder.build()
     hierachy_builder.save_to_file('hierachy_leaf_data.csv')
-    task_builder = EvaluationSetGenerator(hierachy_builder)
-    #task_builder.build()
-    task_builder.build_recursive1()
+
+    neighborhood_task_creator = NeighborhoodTaskCreator()
+    HierarchyTraversal.traverse(hierachy_builder, neighborhood_task_creator)
+
     breakpoint()
 
 if __name__ == '__main__':
