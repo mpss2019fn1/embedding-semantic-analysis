@@ -5,7 +5,6 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import mpld3
 
-
 tree = nx.DiGraph()
 
 
@@ -24,7 +23,9 @@ class HierachyBuilder:
     def __init__(self, property_mapping, relation_groups):
         self.property_mapping = property_mapping
         self.relation_groups = relation_groups
-        self.root_node = Node('root', {relation_source for sublist in self.property_mapping.values() for relation_source in sublist}, [], is_root=True)
+        self.root_node = Node('root',
+                              {relation_source for sublist in self.property_mapping.values() for relation_source in
+                               sublist}, [], is_root=True)
         tree.add_node(str(self.root_node.label))
 
     def build_node(self, node, property):
@@ -77,12 +78,6 @@ class HierachyBuilder:
         for key, val in file_data.items():
             w.writerow([key, val])
 
-
-
-
-
-
     def build_next_level(self, previous_nodes, property):
         for child_node in previous_nodes:
             self.build_node(child_node, property)
-
