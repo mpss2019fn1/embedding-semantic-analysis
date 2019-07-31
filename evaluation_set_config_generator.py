@@ -1,4 +1,5 @@
 from attr import dataclass
+from task_creator import TaskCreator
 
 import yaml
 import os
@@ -88,6 +89,10 @@ class EvaluationSetConfigGenerator:
         return [Task(name=f"Outlier: {task_name} (Cosine)", type="cosine_outlier_detection", test_set=file_path),
                 Task(name=f"Outlier: {task_name} (Euclidean)", type="euclidean_outlier_detection", test_set=file_path)]
 
+    @staticmethod
+    def create_analogy_task(task_name, file_path):
+        return [Task(name=f"Analogy: {task_name}", type="analogy", test_set=file_path)]
+
 
     @staticmethod
     def build_category_tree(root_dir):
@@ -112,13 +117,14 @@ class EvaluationSetConfigGenerator:
                     filename = split_path[-1].split('.csv')[0]
                     key = filename
 
-                    if "outlier" in file:
+                    if TaskCreator.OUTLIER_TASK_PREFIX in file:
                         tasks = EvaluationSetConfigGenerator.create_outlier_tasks(filename, path)
-                    elif "neighborhood" in file:
+                    elif TaskCreator.NEIGHBORHOOD_TASK_PREFIX in file:
                         tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(filename, path)
+                    elif TaskCreator.ANOLOGY_TASK_PREFIX in file:
+                        tasks = EvaluationSetConfigGenerator.create_analogy_task(filename, path)
                     else:
                         raise Exception("Never do this. filename not supported.")
-
 
                     # Kategorie, zu der das testset hinzugefügt werden soll
                     deepest_category = previous_category.categories.get(key, None)
@@ -157,7 +163,7 @@ class EvaluationSetConfigGenerator:
 
 
 if __name__ == '__main__':
-    EvaluationSetConfigGenerator.build_from_file_system('evaluation_set')
+    EvaluationSetConfigGenerator.build_from_file_system('__living_people_100__')
 
     # yaml.dump({'name': 'human',
     #            'enabled': True,

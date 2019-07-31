@@ -8,11 +8,23 @@ from hierarchy_traversal import HierarchyTraversal
 
 class TaskCreator(ABC):
 
+    ANOLOGY_TASK_PREFIX = "anology"
+    NEIGHBORHOOD_TASK_PREFIX = "neighborhood"
+    OUTLIER_TASK_PREFIX = "outlier"
+
     def __init__(self):
         self._PREFIX = ""
 
     @abstractmethod
-    def process_node(self, path, node, entities):
+    def process_node(self, path, node, entities, is_predicate):
+        """
+
+        :param path: path of node (or property if is_property = true
+        :param node: node currently be processed by the hierarchy_traversal
+        :param entities: Contains all entities in path
+        :param is_predicate: True, if a specific property of node has been selected
+        :return: nothing
+        """
         pass
 
     @staticmethod
@@ -40,9 +52,9 @@ class NeighborhoodTaskCreator(TaskCreator):
     def __init__(self):
         super().__init__()
         self._HEADER = ["entity", "group_id", "is_similar"]
-        self._PREFIX = "neighborhood"
+        self._PREFIX = TaskCreator.NEIGHBORHOOD_TASK_PREFIX
 
-    def process_node(self, path, node, entities):
+    def process_node(self, path, node, entities, is_predicate):
         cluster_id = 0
         is_similar = True
 
@@ -55,7 +67,13 @@ class NeighborhoodTaskCreator(TaskCreator):
 
 
 class SimilarityTaskCreator(TaskCreator):
-    pass
+
+    def __init__(self):
+        super.__init__()
+        self._PREFIX = "similarity"
+
+    def process_node(self, path, node, entities, is_predicate):
+        pass
 
 
 class OutlierTaskCreator(TaskCreator):
@@ -63,15 +81,18 @@ class OutlierTaskCreator(TaskCreator):
     def __init__(self, hierarchy, max_group_size=5):
         super().__init__()
         self._HEADER = ["entity", "group_id", "is_similar"]
-        self._PREFIX = "outlier"
+        self._PREFIX = TaskCreator.OUTLIER_TASK_PREFIX
         self.max_group_size = max_group_size
         self.root_node = hierarchy.root_node
 
-    def process_node(self, path, node, entities):
+    def process_node(self, path, node, entities, is_predicate):
         cluster_id = 0
         is_similar = True
 
-        if not node or not node.is_leaf():
+        # node none means that we are being passed all entities to a predicate (for example: all entities having a
+        # sex or gender,
+        # We have to identify predicate calls
+        if is_predicate or not node.is_leaf():
             return
 
         content = [self._HEADER]
@@ -117,3 +138,36 @@ class OutlierTaskCreator(TaskCreator):
                 stack.append(current_node.children[0])
             level += 2
         return None
+
+
+class AnalogyTaskCreator(TaskCreator):
+
+    def __init__(self):
+        super().__init__()
+        self._PREFIX = TaskCreator.ANOLOGY_TASK_PREFIX
+        self._HEADER = ["a", "b"]
+
+    def process_node(self, path, node, entities, is_predicate):
+        if not is_predicate:
+            return
+
+        predicate = path.split("/")[-1]
+
+        # selektiere alle Kinder mit property
+        # Matche alle Kinder
+        # Bekomme alle Entitäten mit sex or gender. Das hilft mir nur nicht, weil cih nicht weiß, welche nun mails sind.
+        # Also muss ich ggf. alle Males selektieren
+        # bekomme ich das leichter hin an einer anderen Stelle? Ich denke nicht.
+
+        anology_test_set = [self._HEADER]
+
+        for child in node.children:
+            child_predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
+            child_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
+            if child_predicate == predicate:
+                for entity in child.values:
+                    anology_test_set.append([HierarchyTraversal.extract_wikidata_id(entity.value),
+                                             HierarchyTraversal.extract_wikidata_id(child_object)])
+
+        if len(anology_test_set) > 1:
+            self.save_to_file(self.filename_from_path(path), anology_test_set)

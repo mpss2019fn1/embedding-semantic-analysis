@@ -9,6 +9,7 @@ from hierachy_builder import HierachyBuilder
 from hierarchy_traversal import HierarchyTraversal
 from task_creator import OutlierTaskCreator
 from task_creator import NeighborhoodTaskCreator
+from task_creator import AnalogyTaskCreator
 
 from wikidata_endpoint.return_types import UriReturnType
 
@@ -63,8 +64,10 @@ async def main():
 
     neighborhood_task_creator = NeighborhoodTaskCreator()
     outlier_task_creator = OutlierTaskCreator(hierachy_builder, 2)
+    analogy_task_creator = AnalogyTaskCreator()
     HierarchyTraversal.traverse(hierachy_builder, neighborhood_task_creator)
     HierarchyTraversal.traverse(hierachy_builder, outlier_task_creator)
+    HierarchyTraversal.traverse(hierachy_builder, analogy_task_creator)
     breakpoint()
 
 if __name__ == '__main__':

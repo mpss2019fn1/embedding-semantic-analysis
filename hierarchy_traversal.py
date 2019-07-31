@@ -31,11 +31,11 @@ class HierarchyTraversal:
 
             # für jedes P
             for predicate, predicate_entities in property_entity_dict.items():
-                task_creator.process_node(path + '/' + predicate, None, predicate_entities)
+                task_creator.process_node(path + '/' + predicate, node, predicate_entities, True)
                 entities.extend(predicate_entities)
 
         # für jedes Q
-        task_creator.process_node(path, node, entities)
+        task_creator.process_node(path, node, entities, False)
         return entities
 
     @staticmethod
