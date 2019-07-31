@@ -68,7 +68,11 @@ async def main():
     HierarchyTraversal.traverse(hierachy_builder, neighborhood_task_creator)
     HierarchyTraversal.traverse(hierachy_builder, outlier_task_creator)
     HierarchyTraversal.traverse(hierachy_builder, analogy_task_creator)
-    breakpoint()
+    # breakpoint()
 
 if __name__ == '__main__':
+    # wikidata_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    # Fahrenheit = map(lambda x: wikidata_ids[x:x+2], range(0, 10, 2))
+    #
+    # print(list(Fahrenheit))
     asyncio.run(main())

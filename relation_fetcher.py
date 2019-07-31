@@ -26,8 +26,13 @@ class RelationFetcher:
         self.endpoint = endpoint or WikidataEndpoint(
             WikidataEndpointConfiguration(Path("resources/wikidata_endpoint_config.ini")))
 
-    async def get_relations(self, wikidata_id, relations_map):
-        query = open('resources/get_relations.rq').read() % f'wd:Q{wikidata_id}'
+    async def get_relations(self, wikidata_ids, relations_map):
+
+        joined_ids = ""
+        for id in wikidata_ids:
+            joined_ids += f"wd:Q{id} "
+
+        query = open('resources/get_relations.rq').read() % joined_ids
         with self.endpoint.request() as request:
             for results in request.post(query):
                 subject, predicate, object_ = results.values()
@@ -35,8 +40,12 @@ class RelationFetcher:
                 self.redis.sadd(f'{predicate} {object_}', subject)
 
     async def fetch(self):
+        penis_size = 1
         relations_entity_map = defaultdict(set)
-        await asyncio.gather(*map(lambda x: self.get_relations(x, relations_entity_map), self.wikidata_ids))
+        # wikidata ids sollen als Liste übergeben werden
+        await asyncio.gather(*map(
+            lambda x: self.get_relations(self.wikidata_ids[x: min(x + penis_size, len(self.wikidata_ids))],
+                                         relations_entity_map), range(0, len(self.wikidata_ids), penis_size)))
         return relations_entity_map
 
     def __del__(self):
