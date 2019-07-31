@@ -19,6 +19,7 @@ graphviz = "*"
 mpld3 = "*"
 holoviz = "*"
 pyyaml = "*"
+tqdm = "*"
 
 [requires]
 python_version = "3.7"

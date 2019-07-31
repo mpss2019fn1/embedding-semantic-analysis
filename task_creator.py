@@ -8,12 +8,13 @@ from hierarchy_traversal import HierarchyTraversal
 
 class TaskCreator(ABC):
 
-    ANOLOGY_TASK_PREFIX = "anology"
+    ANOLOGY_TASK_PREFIX = "analogy"
     NEIGHBORHOOD_TASK_PREFIX = "neighborhood"
     OUTLIER_TASK_PREFIX = "outlier"
 
-    def __init__(self):
+    def __init__(self, output_dir):
         self._PREFIX = ""
+        self._output_dir = output_dir
 
     @abstractmethod
     def process_node(self, path, node, entities, is_predicate):
@@ -44,7 +45,7 @@ class TaskCreator(ABC):
 
         path = path + self._PREFIX + "_" + filename + ".csv"
 
-        return path
+        return os.path.join(self._output_dir, path)
 
 
 class NeighborhoodTaskCreator(TaskCreator):

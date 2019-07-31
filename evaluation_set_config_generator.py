@@ -1,5 +1,6 @@
 from attr import dataclass
 from task_creator import TaskCreator
+from argparse import ArgumentParser
 
 import yaml
 import os
@@ -16,6 +17,7 @@ class TaskConfiguration:
         yaml_dict["enabled"] = self.enabled
 
         return {"task_configuration": yaml_dict}
+
 
 @dataclass
 class Task:
@@ -93,7 +95,6 @@ class EvaluationSetConfigGenerator:
     def create_analogy_task(task_name, file_path):
         return [Task(name=f"Analogy: {task_name}", type="analogy", test_set=file_path)]
 
-
     @staticmethod
     def build_category_tree(root_dir):
         root_category = Category(name="root", enabled=True, categories={}, tasks=[])
@@ -121,10 +122,10 @@ class EvaluationSetConfigGenerator:
                         tasks = EvaluationSetConfigGenerator.create_outlier_tasks(filename, path)
                     elif TaskCreator.NEIGHBORHOOD_TASK_PREFIX in file:
                         tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(filename, path)
-                    elif TaskCreator.ANOLOGY_TASK_PREFIX in file:
-                        tasks = EvaluationSetConfigGenerator.create_analogy_task(filename, path)
+                    # elif TaskCreator.ANOLOGY_TASK_PREFIX in file:
+                    #     tasks = EvaluationSetConfigGenerator.create_analogy_task(filename, path)
                     else:
-                        raise Exception("Never do this. filename not supported.")
+                        continue
 
                     # Kategorie, zu der das testset hinzugefügt werden soll
                     deepest_category = previous_category.categories.get(key, None)
@@ -136,42 +137,40 @@ class EvaluationSetConfigGenerator:
 
         return root_category
 
-
     @staticmethod
-    def build_from_file_system(root_dir):
+    def build_from_file_system(evaluation_data_dir, filename):
+        """
+
+        :param evaluation_data_dir: root directory of directory containing test sets
+        :param filename: name of yaml file to save configuration to
+        :return: Nothing
+        """
         task_configurations = EvaluationSetConfigGenerator.default_task_configurations()
-        root_node = EvaluationSetConfigGenerator.build_category_tree(root_dir)
+        root_node = EvaluationSetConfigGenerator.build_category_tree(evaluation_data_dir)
 
         yaml_dict = dict()
 
         yaml_dict["configuration"] = dict()
-        yaml_dict["configuration"]["task_configurations"] =\
+        yaml_dict["configuration"]["task_configurations"] = \
             [task_configuration.to_yaml_entry() for task_configuration in task_configurations]
         yaml_dict["configuration"]["categories"] = []
 
         for category in root_node.categories.values():
             yaml_dict["configuration"]["categories"].append(category.to_yaml_entry())
 
-        print(yaml.dump(yaml_dict))
+        with open(filename, "w+") as file:
+            yaml.dump(yaml_dict, file, default_flow_style=False)
 
-    # print(yaml.dump({"task": {"name": "outlier_meat", "type": "cosine_metric", "test_set": "hungs.csv"}}))
 
-        #
-        # with open('test.yaml', "r") as stream:
-        #     configuration = yaml.safe_load(stream)
-        # breakpoint()breakpoint
+def setup_arguments(parser):
+    parser.add_argument('--evaluation_data_dir', type=str, required=True)
+    parser.add_argument('--save_to_config', type=str, required=True)
 
 
 if __name__ == '__main__':
-    EvaluationSetConfigGenerator.build_from_file_system('__living_people_100__')
+    parser = ArgumentParser()
+    setup_arguments(parser)
+    args = parser.parse_args()
 
-    # yaml.dump({'name': 'human',
-    #            'enabled': True,
-    #            'tasks': {name: 'male <-> female (Analogy Task)', type: 'analogy' , test_set: path}
-    #            'categories': { categiry ; {'name': 'stuff',
-    #                            'enabled': True,
-    #                            'tasks': {},
-    #                            'categories': }},
-    #
-    #
-    # }})
+    # EvaluationSetConfigGenerator.build_from_file_system('__living_people_10000__')
+    EvaluationSetConfigGenerator.build_from_file_system(args.evaluation_data_dir, args.save_to_config)

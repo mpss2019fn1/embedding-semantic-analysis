@@ -39,8 +39,10 @@ class RelationFetcher:
                 relations_map[(predicate, object_)].add(subject)
                 self.redis.sadd(f'{predicate} {object_}', subject)
 
+        print(len(relations_map))
+
     async def fetch(self):
-        penis_size = 1
+        penis_size = 666
         relations_entity_map = defaultdict(set)
         # wikidata ids sollen als Liste übergeben werden
         await asyncio.gather(*map(
