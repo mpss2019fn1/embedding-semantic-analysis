@@ -50,8 +50,8 @@ class TaskCreator(ABC):
 
 class NeighborhoodTaskCreator(TaskCreator):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, output_dir):
+        super().__init__(output_dir)
         self._HEADER = ["entity", "group_id", "is_similar"]
         self._PREFIX = TaskCreator.NEIGHBORHOOD_TASK_PREFIX
 
@@ -69,8 +69,8 @@ class NeighborhoodTaskCreator(TaskCreator):
 
 class SimilarityTaskCreator(TaskCreator):
 
-    def __init__(self):
-        super.__init__()
+    def __init__(self, output_dir):
+        super.__init__(output_dir)
         self._PREFIX = "similarity"
 
     def process_node(self, path, node, entities, is_predicate):
@@ -79,8 +79,8 @@ class SimilarityTaskCreator(TaskCreator):
 
 class OutlierTaskCreator(TaskCreator):
 
-    def __init__(self, hierarchy, max_group_size=5):
-        super().__init__()
+    def __init__(self, output_dir, hierarchy, max_group_size=5):
+        super().__init__(output_dir)
         self._HEADER = ["entity", "group_id", "is_similar"]
         self._PREFIX = TaskCreator.OUTLIER_TASK_PREFIX
         self.max_group_size = max_group_size
@@ -143,8 +143,8 @@ class OutlierTaskCreator(TaskCreator):
 
 class AnalogyTaskCreator(TaskCreator):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, output_dir):
+        super().__init__(output_dir)
         self._PREFIX = TaskCreator.ANOLOGY_TASK_PREFIX
         self._HEADER = ["a", "b"]
 
