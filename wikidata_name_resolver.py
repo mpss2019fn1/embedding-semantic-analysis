@@ -62,6 +62,7 @@ def main():
 
 class ResolveWorker(Process):
 
+    ENTITY_ID_PREFIX: str = "http://www.wikidata.org/entity/"
     QUERY_TEMPLATE: str = "https://www.wikidata.org/w/api.php?action=wbgetentities&props=labels&ids=%1%&format=json"
 
     def __init__(self, entities_to_resolve: List[str], entity_names: Dict[str, str], batch_size: int = 50):
@@ -97,7 +98,7 @@ class ResolveWorker(Process):
                     logging.debug(f"{entity_id} has no english label... falling back to {languages[0]}")
                     language = languages[0]
 
-                self._entity_names[entity_id] = entities[entity_id]["labels"][language]["value"]
+                self._entity_names[ResolveWorker.ENTITY_ID_PREFIX + entity_id] = entities[entity_id]["labels"][language]["value"]
 
         except Exception as exception:
             logging.error(f"Exception {exception} during unpacking")
