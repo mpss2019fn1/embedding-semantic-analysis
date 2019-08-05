@@ -110,7 +110,7 @@ class OutlierTaskCreator(TaskCreator):
                 entities_group.clear()
                 cluster_id += 1
 
-        if len(content) > 1:
+        if len(content) > 3:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
 
     def get_outlier(self, path):
@@ -167,6 +167,8 @@ class AnalogyTaskCreator(TaskCreator):
         for child in node.children:
             child_predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
             child_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
+            if child_object[0] != "Q":
+                continue
             if int(child_object[1:]) not in self.wikidata_id_set:
                 continue
 
@@ -175,5 +177,5 @@ class AnalogyTaskCreator(TaskCreator):
                     anology_test_set.append([HierarchyTraversal.extract_wikidata_id(entity.value),
                                              HierarchyTraversal.extract_wikidata_id(child_object)])
 
-        if len(anology_test_set) > 1:
+        if len(anology_test_set) > 2:
             self.save_to_file(self.filename_from_path(path), anology_test_set)
