@@ -64,7 +64,8 @@ class NeighborhoodTaskCreator(TaskCreator):
         for entity in entities:
             content.append([entity, cluster_id, is_similar])
 
-        TaskCreator.save_to_file(self.filename_from_path(path), content)
+        if len(content) > 2:
+            TaskCreator.save_to_file(self.filename_from_path(path), content)
 
 
 class SimilarityTaskCreator(TaskCreator):
