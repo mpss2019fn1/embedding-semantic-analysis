@@ -1,6 +1,7 @@
 from attr import dataclass
-import typing
 import csv
+import typing
+
 import networkx as nx
 
 from relation_selector import RelationSelector
