@@ -78,18 +78,18 @@ class EvaluationSetConfigGenerator:
 
     @staticmethod
     def create_neighborhood_tasks(task_name, file_path):
-        return [Task(name=f"Neighborhood: {task_name} (Cosine)", type="cosine_neighborhood", test_set=file_path),
-                Task(name=f"Neighborhood: {task_name} (Euclidean)", type="euclidean_neighborhood", test_set=file_path)]
+        return [Task(name=f"{task_name}", type="cosine_neighborhood", test_set=file_path),
+                Task(name=f"{task_name}", type="euclidean_neighborhood", test_set=file_path)]
 
     @staticmethod
     def create_similarity_tasks(task_name, file_path):
-        return [Task(name=f"Similarity: {task_name} (Cosine)", type="cosine_similarity", test_set=file_path),
-                Task(name=f"Similarity: {task_name} (Euclidean)", type="euclidean_similarity", test_set=file_path)]
+        return [Task(name=f"{task_name}", type="cosine_similarity", test_set=file_path),
+                Task(name=f"{task_name}", type="euclidean_similarity", test_set=file_path)]
 
     @staticmethod
     def create_outlier_tasks(task_name, file_path):
-        return [Task(name=f"Outlier: {task_name} (Cosine)", type="cosine_outlier_detection", test_set=file_path),
-                Task(name=f"Outlier: {task_name} (Euclidean)", type="euclidean_outlier_detection", test_set=file_path)]
+        return [Task(name=f"{task_name}", type="cosine_outlier_detection", test_set=file_path),
+                Task(name=f"{task_name}", type="euclidean_outlier_detection", test_set=file_path)]
 
     @staticmethod
     def create_analogy_task(task_name, file_path):
@@ -116,14 +116,15 @@ class EvaluationSetConfigGenerator:
                         previous_category = current_category
 
                     filename = split_path[-1].split('.csv')[0]
+                    task_name = filename.split('_')[1]
                     key = filename
 
                     if TaskCreator.OUTLIER_TASK_PREFIX in file:
-                        tasks = EvaluationSetConfigGenerator.create_outlier_tasks(filename, path)
+                        tasks = EvaluationSetConfigGenerator.create_outlier_tasks(task_name, path)
                     elif TaskCreator.NEIGHBORHOOD_TASK_PREFIX in file:
-                        tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(filename, path)
-                    # elif TaskCreator.ANOLOGY_TASK_PREFIX in file:
-                    #     tasks = EvaluationSetConfigGenerator.create_analogy_task(filename, path)
+                        tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(task_name, path)
+                    elif TaskCreator.ANOLOGY_TASK_PREFIX in file:
+                        tasks = EvaluationSetConfigGenerator.create_analogy_task(task_name, path)
                     else:
                         continue
 
