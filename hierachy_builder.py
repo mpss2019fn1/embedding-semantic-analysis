@@ -2,8 +2,8 @@ from attr import dataclass
 import typing
 import csv
 import networkx as nx
-import matplotlib.pyplot as plt
-import mpld3
+
+from relation_selector import RelationSelector
 
 tree = nx.DiGraph()
 
@@ -28,33 +28,42 @@ class HierachyBuilder:
                                sublist}, [], is_root=True)
         tree.add_node(str(self.root_node.label))
 
-    def build_node(self, node, property):
-        relation_groups = self.property_mapping[property] & node.values
+    def build_node(self, node, property_):
+        relation_groups = self.property_mapping[property_] & node.values
         if len(relation_groups) > 0:
-            child_node = Node(property, relation_groups, [])
+            child_node = Node(property_, relation_groups, [])
             tree.add_node(str(child_node.label))
             tree.add_edge(str(node.label), str(child_node.label))
             node.children.append(child_node)
+            return child_node
 
     def build(self):
-        previous_nodes = [self.root_node]
-        for relation, relation_targets in self.relation_groups.items():
-            for relation_target in relation_targets:
-                property = (relation, relation_target)
-                self.build_next_level(previous_nodes, property)
-            children = [node.children for node in previous_nodes]
-            previous_nodes = [node for sublist in children for node in sublist]
+        current_nodes = [self.root_node]
+        while current_nodes:
+            current_node = current_nodes.pop()
+            current_nodes.extend(list(x for x in self.split_node_on_predicate(current_node) if x))
 
-        # pos = nx.spring_layout(tree)
-        # fig, ax = plt.subplots()
-        # scatter = nx.draw_networkx_nodes(tree, pos, ax=ax)
-        # nx.draw_networkx_edges(tree, pos, ax=ax)
-        #
-        # labels = tree.nodes()
-        # tooltip = mpld3.plugins.PointLabelTooltip(scatter, labels=labels)
-        # mpld3.plugins.connect(fig, tooltip)
+    def split_node_on_predicate(self, node):
+        local_property_mapping = {property_: (property_group & node.values) for property_, property_group in
+                                  self.property_mapping.items()}
+        local_property_mapping = {property_: property_group for property_, property_group in
+                                  local_property_mapping.items() if
+                                  len(property_group) > 0}
+        relation_selector = RelationSelector(local_property_mapping)
 
-        # mpld3.show()
+        relation_selector.remove_unique_relations()
+        relation_selector.remove_rare_relations(0.1)
+        relation_selector.remove_overlapping_relation_groups()
+
+        relation_groups = relation_selector.relation_groups()
+        if len(relation_groups) < 1:
+            return
+        relation, relation_targets = next(iter(relation_groups.items()))
+        if len(relation_targets) < 2:
+            return
+        for relation_target in relation_targets:
+            property_ = (relation, relation_target)
+            yield self.build_node(node, property_)
 
     def save_to_file(self, filename):
         # dfs
@@ -77,7 +86,3 @@ class HierachyBuilder:
         w = csv.writer(open(filename, "w"))
         for key, val in file_data.items():
             w.writerow([key, val])
-
-    def build_next_level(self, previous_nodes, property):
-        for child_node in previous_nodes:
-            self.build_node(child_node, property)
