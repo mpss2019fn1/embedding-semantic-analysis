@@ -39,7 +39,7 @@ def main():
 
     logging.info(f"{len(entities_to_resolve)} unique entities to resolve")
     entity_ids: List[str] = list(entities_to_resolve)
-    number_of_workers: int = 8
+    number_of_workers: int = 32
     resolve_worker_batch_size: int = math.ceil(len(entity_ids) / number_of_workers)
     workers: List[ResolveWorker] = []
     for i in range(number_of_workers):
@@ -53,6 +53,7 @@ def main():
         worker.join()
         entity_names = {**entity_names, **worker.entity_names}
 
+    logging.info(f"Resolved {len(entity_names)} out of {len(entity_ids)} entity names ({len(entity_names) / len(entity_ids) * 100} %)")
     with Path("entity_names.csv").open("w+") as output_stream:
         print("entity_id,entity_label", file=output_stream)
         for entity_id, entity_name in entity_names.items():
