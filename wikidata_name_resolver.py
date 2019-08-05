@@ -1,6 +1,7 @@
 import csv
 import logging
 import math
+import multiprocessing
 import re
 from multiprocessing import Process
 from pathlib import Path
@@ -42,16 +43,15 @@ def main():
     number_of_workers: int = 32
     resolve_worker_batch_size: int = math.ceil(len(entity_ids) / number_of_workers)
     workers: List[ResolveWorker] = []
+    entity_names: Dict[str, str] = multiprocessing.Manager().dict()
     for i in range(number_of_workers):
         batch: List[str] = entity_ids[i * resolve_worker_batch_size: (i + 1) * resolve_worker_batch_size]
-        worker: ResolveWorker = ResolveWorker(batch)
+        worker: ResolveWorker = ResolveWorker(batch, entity_names)
         workers.append(worker)
         worker.start()
 
-    entity_names: Dict[str, str] = {}
     for worker in workers:
         worker.join()
-        entity_names = {**entity_names, **worker.entity_names}
 
     logging.info(f"Resolved {len(entity_names)} out of {len(entity_ids)} entity names ({len(entity_names) / len(entity_ids) * 100} %)")
     with Path("entity_names.csv").open("w+") as output_stream:
@@ -64,15 +64,11 @@ class ResolveWorker(Process):
 
     QUERY_TEMPLATE: str = "https://www.wikidata.org/w/api.php?action=wbgetentities&props=labels&ids=%1%&format=json"
 
-    def __init__(self, entities_to_resolve: List[str], batch_size: int = 50):
+    def __init__(self, entities_to_resolve: List[str], entity_names: Dict[str, str], batch_size: int = 50):
         super(ResolveWorker, self).__init__()
         self._entity_ids: List[str] = entities_to_resolve
         self._batch_size: int = batch_size
-        self._entity_names: Dict[str, str] = {}
-
-    @property
-    def entity_names(self) -> Dict[str, str]:
-        return self._entity_names
+        self._entity_names: Dict[str, str] = entity_names
 
     def run(self) -> None:
         for i in range(0, len(self._entity_ids), self._batch_size):
