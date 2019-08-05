@@ -93,7 +93,7 @@ class EvaluationSetConfigGenerator:
 
     @staticmethod
     def create_analogy_task(task_name, file_path):
-        return [Task(name=f"Analogy: {task_name}", type="analogy", test_set=file_path)]
+        return [Task(name=f"{task_name}", type="analogy", test_set=file_path)]
 
     @staticmethod
     def build_category_tree(root_dir):
