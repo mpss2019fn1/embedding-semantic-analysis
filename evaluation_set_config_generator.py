@@ -117,7 +117,7 @@ class EvaluationSetConfigGenerator:
 
                     filename = split_path[-1].split('.csv')[0]
                     task_name = filename.split('_')[1]
-                    key = filename
+                    key = filename.split('_')[1]
 
                     if TaskCreator.OUTLIER_TASK_PREFIX in file:
                         tasks = EvaluationSetConfigGenerator.create_outlier_tasks(task_name, path)
@@ -164,8 +164,8 @@ class EvaluationSetConfigGenerator:
 
 
 def setup_arguments(parser):
-    parser.add_argument('--evaluation_data_dir', type=str, required=True)
-    parser.add_argument('--save_to_config', type=str, required=True)
+    parser.add_argument('--evaluation-data-dir', type=str, required=True)
+    parser.add_argument('--save-to-config', type=str, required=True)
 
 
 if __name__ == '__main__':
