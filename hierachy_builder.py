@@ -1,9 +1,8 @@
-from attr import dataclass
-import typing
 import csv
+import typing
+
 import networkx as nx
-import matplotlib.pyplot as plt
-import mpld3
+from attr import dataclass
 
 tree = nx.DiGraph()
 
