@@ -102,7 +102,8 @@ class EvaluationSetConfigGenerator:
         for root, dirs, files in os.walk(root_dir, topdown=False):
             for file in files:
                 if file.endswith('.csv'):
-                    path = root + '/' + file
+                    path = os.path.join(root, file)
+                    # path = root + '/' + file
                     print(path)
                     split_path = path.split('/')
                     previous_category = root_category
