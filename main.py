@@ -18,7 +18,9 @@ PICKLE_FILE = 'people_relations.pickle'
 def setup_arguments(parser):
     parser.add_argument('--wikidata-ids', type=list, required=False)
     parser.add_argument('--linking-file', type=str, required=False)
-    parser.add_argument('--output-dir', type=str, required=False)
+    parser.add_argument('--output-dir', type=str, required=True)
+    parser.add_argument('--top-count', type=int, required=False, default=float('inf'))
+    parser.add_argument('--entities-per-query', type=int, required=False, default=250)
 
 
 def read_ids_from_linking_file(filename, rows_to_read):
@@ -34,23 +36,22 @@ def read_ids_from_linking_file(filename, rows_to_read):
 
 
 async def main():
-    # parser = ArgumentParser()
-    # setup_arguments(parser)
-    # args = parser.parse_args()
+    parser = ArgumentParser()
+    setup_arguments(parser)
+    args = parser.parse_args()
 
-    # if args.linking_file:
-    #     wikidata_ids = read_ids_from_linking_file(args.linking_file, 10000)
-    # elif args.wikidata_ids:
-    #     wikidata_ids = (arg.split('Q')[1] for arg in args.wikidata_ids)
-    # else:
-    #     wikidata_ids = []
-    wikidata_ids = []
+    if args.linking_file:
+        wikidata_ids = read_ids_from_linking_file(args.linking_file, args.top_count)
+    elif args.wikidata_ids:
+        wikidata_ids = (arg.split('Q')[1] for arg in args.wikidata_ids)
+    else:
+        wikidata_ids = []
 
     if Path(PICKLE_FILE).exists():
         with open(PICKLE_FILE, 'rb') as handle:
             relation_mapping = pickle.load(handle)
     else:
-        relation_fetcher = RelationFetcher(wikidata_ids)
+        relation_fetcher = RelationFetcher(wikidata_ids, args.entities_per_query)
         relation_mapping = await relation_fetcher.fetch()
     relation_selector = RelationSelector(relation_mapping)
 
@@ -66,11 +67,10 @@ async def main():
 
     neighborhood_task_creator = NeighborhoodTaskCreator(args.output_dir)
     outlier_task_creator = OutlierTaskCreator(args.output_dir, hierachy_builder, 2)
-    analogy_task_creator = AnalogyTaskCreator(args.output_dir)
+    analogy_task_creator = AnalogyTaskCreator(args.output_dir, wikidata_ids)
     HierarchyTraversal.traverse(hierachy_builder, neighborhood_task_creator)
     HierarchyTraversal.traverse(hierachy_builder, outlier_task_creator)
     HierarchyTraversal.traverse(hierachy_builder, analogy_task_creator)
-    breakpoint()
 
 
 if __name__ == '__main__':

@@ -70,7 +70,8 @@ class RelationFetcherCache:
 
 class RelationFetcher:
 
-    def __init__(self, wikidata_ids, endpoint=None, redis_config=None):
+    def __init__(self, wikidata_ids, entities_per_query, endpoint=None, redis_config=None):
+        self.entities_per_query = entities_per_query
         self.entities_fetched = 0
         self.wikidata_ids = wikidata_ids
         self.redis = RelationFetcherCache() if not redis_config else Redis(**redis_config)
@@ -106,14 +107,14 @@ class RelationFetcher:
         print(f"{self.entities_fetched} entities fetched.")
 
     async def fetch(self):
-        entities_per_query = 50
         self.entities_fetched = 0
         relations_entity_map = defaultdict(set)
         # wikidata ids sollen als Liste übergeben werden
         print(f"Fetching {len(self.wikidata_ids)} entities.")
         await asyncio.gather(*map(
-            lambda x: self.get_relations(self.wikidata_ids[x: min(x + entities_per_query, len(self.wikidata_ids))],
-                                         relations_entity_map), range(0, len(self.wikidata_ids), entities_per_query)))
+            lambda x: self.get_relations(self.wikidata_ids[x: min(x + self.entities_per_query, len(self.wikidata_ids))],
+                                         relations_entity_map),
+            range(0, len(self.wikidata_ids), self.entities_per_query)))
         return relations_entity_map
 
     def __del__(self):

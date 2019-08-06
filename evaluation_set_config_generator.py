@@ -78,22 +78,22 @@ class EvaluationSetConfigGenerator:
 
     @staticmethod
     def create_neighborhood_tasks(task_name, file_path):
-        return [Task(name=f"Neighborhood: {task_name} (Cosine)", type="cosine_neighborhood", test_set=file_path),
-                Task(name=f"Neighborhood: {task_name} (Euclidean)", type="euclidean_neighborhood", test_set=file_path)]
+        return [Task(name=f"{task_name}", type="cosine_neighborhood", test_set=file_path),
+                Task(name=f"{task_name}", type="euclidean_neighborhood", test_set=file_path)]
 
     @staticmethod
     def create_similarity_tasks(task_name, file_path):
-        return [Task(name=f"Similarity: {task_name} (Cosine)", type="cosine_similarity", test_set=file_path),
-                Task(name=f"Similarity: {task_name} (Euclidean)", type="euclidean_similarity", test_set=file_path)]
+        return [Task(name=f"{task_name}", type="cosine_similarity", test_set=file_path),
+                Task(name=f"{task_name}", type="euclidean_similarity", test_set=file_path)]
 
     @staticmethod
     def create_outlier_tasks(task_name, file_path):
-        return [Task(name=f"Outlier: {task_name} (Cosine)", type="cosine_outlier_detection", test_set=file_path),
-                Task(name=f"Outlier: {task_name} (Euclidean)", type="euclidean_outlier_detection", test_set=file_path)]
+        return [Task(name=f"{task_name}", type="cosine_outlier_detection", test_set=file_path),
+                Task(name=f"{task_name}", type="euclidean_outlier_detection", test_set=file_path)]
 
     @staticmethod
     def create_analogy_task(task_name, file_path):
-        return [Task(name=f"Analogy: {task_name}", type="analogy", test_set=file_path)]
+        return [Task(name=f"{task_name}", type="analogy", test_set=file_path)]
 
     @staticmethod
     def build_category_tree(root_dir):
@@ -102,7 +102,8 @@ class EvaluationSetConfigGenerator:
         for root, dirs, files in os.walk(root_dir, topdown=False):
             for file in files:
                 if file.endswith('.csv'):
-                    path = root + '/' + file
+                    path = os.path.join(root, file)
+                    # path = root + '/' + file
                     print(path)
                     split_path = path.split('/')
                     previous_category = root_category
@@ -116,14 +117,15 @@ class EvaluationSetConfigGenerator:
                         previous_category = current_category
 
                     filename = split_path[-1].split('.csv')[0]
-                    key = filename
+                    task_name = filename.split('_')[1]
+                    key = filename.split('_')[1]
 
                     if TaskCreator.OUTLIER_TASK_PREFIX in file:
-                        tasks = EvaluationSetConfigGenerator.create_outlier_tasks(filename, path)
+                        tasks = EvaluationSetConfigGenerator.create_outlier_tasks(task_name, path)
                     elif TaskCreator.NEIGHBORHOOD_TASK_PREFIX in file:
-                        tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(filename, path)
-                    # elif TaskCreator.ANOLOGY_TASK_PREFIX in file:
-                    #     tasks = EvaluationSetConfigGenerator.create_analogy_task(filename, path)
+                        tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(task_name, path)
+                    elif TaskCreator.ANOLOGY_TASK_PREFIX in file:
+                        tasks = EvaluationSetConfigGenerator.create_analogy_task(task_name, path)
                     else:
                         continue
 
@@ -163,8 +165,8 @@ class EvaluationSetConfigGenerator:
 
 
 def setup_arguments(parser):
-    parser.add_argument('--evaluation_data_dir', type=str, required=True)
-    parser.add_argument('--save_to_config', type=str, required=True)
+    parser.add_argument('--evaluation-data-dir', type=str, required=True)
+    parser.add_argument('--save-to-config', type=str, required=True)
 
 
 if __name__ == '__main__':

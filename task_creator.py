@@ -64,7 +64,8 @@ class NeighborhoodTaskCreator(TaskCreator):
         for entity in entities:
             content.append([entity, cluster_id, is_similar])
 
-        TaskCreator.save_to_file(self.filename_from_path(path), content)
+        if len(content) > 2:
+            TaskCreator.save_to_file(self.filename_from_path(path), content)
 
 
 class SimilarityTaskCreator(TaskCreator):
@@ -81,14 +82,14 @@ class OutlierTaskCreator(TaskCreator):
 
     def __init__(self, output_dir, hierarchy, max_group_size=5):
         super().__init__(output_dir)
-        self._HEADER = ["entity", "group_id", "is_similar"]
+        self._HEADER = ["entity", "group_id", "is_outlier"]
         self._PREFIX = TaskCreator.OUTLIER_TASK_PREFIX
         self.max_group_size = max_group_size
         self.root_node = hierarchy.root_node
 
     def process_node(self, path, node, entities, is_predicate):
         cluster_id = 0
-        is_similar = True
+        is_similar = False
 
         # node none means that we are being passed all entities to a predicate (for example: all entities having a
         # sex or gender,
@@ -109,7 +110,7 @@ class OutlierTaskCreator(TaskCreator):
                 entities_group.clear()
                 cluster_id += 1
 
-        if len(content) > 1:
+        if len(content) > 3:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
 
     def get_outlier(self, path):
@@ -143,10 +144,11 @@ class OutlierTaskCreator(TaskCreator):
 
 class AnalogyTaskCreator(TaskCreator):
 
-    def __init__(self, output_dir):
+    def __init__(self, output_dir, wikidata_ids):
         super().__init__(output_dir)
         self._PREFIX = TaskCreator.ANOLOGY_TASK_PREFIX
         self._HEADER = ["a", "b"]
+        self.wikidata_id_set = set(wikidata_ids)
 
     def process_node(self, path, node, entities, is_predicate):
         if not is_predicate:
@@ -165,10 +167,15 @@ class AnalogyTaskCreator(TaskCreator):
         for child in node.children:
             child_predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
             child_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
+            if child_object[0] != "Q":
+                continue
+            if int(child_object[1:]) not in self.wikidata_id_set:
+                continue
+
             if child_predicate == predicate:
                 for entity in child.values:
                     anology_test_set.append([HierarchyTraversal.extract_wikidata_id(entity.value),
                                              HierarchyTraversal.extract_wikidata_id(child_object)])
 
-        if len(anology_test_set) > 1:
+        if len(anology_test_set) > 2:
             self.save_to_file(self.filename_from_path(path), anology_test_set)
