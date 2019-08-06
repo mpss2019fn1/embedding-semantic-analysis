@@ -14,6 +14,7 @@ class Node:
     label: str
     values: 'typing.Any'
     children: 'typing.Any'
+    splits: 'typing.Any' = []
     is_root: bool = False
 
     def is_leaf(self):
@@ -32,7 +33,7 @@ class HierachyBuilder:
     def build_node(self, node, property_):
         relation_groups = self.property_mapping[property_] & node.values
         if len(relation_groups) > 0:
-            child_node = Node(property_, relation_groups, [])
+            child_node = Node(property_, relation_groups, [], node.splits + [property_[0]])
             tree.add_node(str(child_node.label))
             tree.add_edge(str(node.label), str(child_node.label))
             node.children.append(child_node)
@@ -42,6 +43,7 @@ class HierachyBuilder:
         current_nodes = [self.root_node]
         while current_nodes:
             current_node = current_nodes.pop()
+            print(len(current_nodes))
             current_nodes.extend(list(x for x in self.split_node_on_predicate(current_node) if x))
 
     def split_node_on_predicate(self, node):
@@ -50,20 +52,19 @@ class HierachyBuilder:
         local_property_mapping = {property_: property_group for property_, property_group in
                                   local_property_mapping.items() if
                                   len(property_group) > 0}
-        relation_selector = RelationSelector(local_property_mapping)
-
-        relation_selector.remove_unique_relations()
-        relation_selector.remove_rare_relations(0.1)
-        relation_selector.remove_overlapping_relation_groups()
-
-        relation_groups = relation_selector.relation_groups()
-        if len(relation_groups) < 1:
+        if len(local_property_mapping) < 1:
             return
-        relation, relation_targets = next(iter(relation_groups.items()))
+        relation_selector = RelationSelector(local_property_mapping)
+        relation = relation_selector.top_property(not_include=node.splits)
+        if not relation:
+            return
+        relation_targets = relation_selector.relation_groups()[relation]
         if len(relation_targets) < 2:
             return
         for relation_target in relation_targets:
             property_ = (relation, relation_target)
+            if local_property_mapping[property_] == node.values:
+                continue
             yield self.build_node(node, property_)
 
     def save_to_file(self, filename):

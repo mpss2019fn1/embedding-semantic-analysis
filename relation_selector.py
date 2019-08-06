@@ -7,6 +7,8 @@ import logging
 from wikidata_endpoint import WikidataEndpoint, WikidataEndpointConfiguration
 from wikidata_endpoint.return_types import UriReturnType
 
+import pandas as pd
+
 
 class TimeoutException(Exception):
     pass
@@ -29,6 +31,19 @@ class RelationSelector:
         self.number_entities = len(set().union(*relations_mapping.values()))
         self.endpoint = endpoint or WikidataEndpoint(
             WikidataEndpointConfiguration(Path("resources/wikidata_endpoint_config.ini")))
+        self.data_frame = pd.DataFrame()
+
+    def top_property(self, not_include):
+        # self.remove_rare_relations(0.1)
+        # self.remove_overlapping_relation_groups()
+        self.data_frame = pd.DataFrame(list(self.predicate_popularity().items()), columns=['predicate', 'popularity'])
+        self.data_frame['popularity'] = self.data_frame['popularity'].astype('float64')
+        # self.data_frame['overlapping'] = self.data_frame['predicate'].map(self.non_overlapping_entities_counter())
+        self.data_frame['score'] = self.data_frame['popularity']
+        self.data_frame = self.data_frame[~self.data_frame['predicate'].isin(not_include)]
+        if self.data_frame['score'].size == 0:
+            return
+        return self.data_frame.loc[self.data_frame['score'].idxmax()]['predicate']
 
     # @lru_cache(maxsize=None)
     def property_counter(self, threshold=1):
@@ -122,12 +137,14 @@ class RelationSelector:
             result[predicate] = len(predicate_objects)
         return Counter(result)
 
+    def non_overlapping_entities_counter(self):
+        return {predicate_: len(self.non_overlapping_entities(predicate_)) for predicate_ in self.relation_groups()}
+
     def non_overlapping_entities(self, predicate):
         result = set()
-        predicate_url = UriReturnType('http://www.wikidata.org/entity/P' + predicate)
-        relation_groups = self.relation_groups()[predicate_url]
+        relation_groups = self.relation_groups()[predicate]
         for object_ in relation_groups:
-            result = result.symmetric_difference(self.property_mapping[(predicate_url, object_)])
+            result = result.symmetric_difference(self.property_mapping[(predicate, object_)])
         return result
 
     def score(self, relation):

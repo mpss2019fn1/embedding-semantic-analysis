@@ -62,7 +62,7 @@ async def main():
     # print(len(relation_selector.property_mapping))
     hierachy_builder = HierachyBuilder(relation_selector.property_mapping, relation_selector.relation_groups())
     hierachy_builder.build()
-    hierachy_builder.save_to_file('hierachy_leaf_data.csv')
+    hierachy_builder.save_to_file('hierarchy_leaf_data.csv')
 
     neighborhood_task_creator = NeighborhoodTaskCreator(args.output_dir)
     outlier_task_creator = OutlierTaskCreator(args.output_dir, hierachy_builder, 2)
