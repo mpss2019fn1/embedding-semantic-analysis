@@ -20,7 +20,7 @@ def setup_arguments(parser):
     parser.add_argument('--linking-file', type=str, required=False)
     parser.add_argument('--output-dir', type=str, required=True)
     parser.add_argument('--top-count', type=int, required=False, default=float('inf'))
-    parser.add_argument('--entities-per-query', type=str, required=False, default=250)
+    parser.add_argument('--entities-per-query', type=int, required=False, default=250)
 
 
 def read_ids_from_linking_file(filename, rows_to_read):
@@ -71,7 +71,6 @@ async def main():
     HierarchyTraversal.traverse(hierachy_builder, neighborhood_task_creator)
     HierarchyTraversal.traverse(hierachy_builder, outlier_task_creator)
     HierarchyTraversal.traverse(hierachy_builder, analogy_task_creator)
-    breakpoint()
 
 
 if __name__ == '__main__':

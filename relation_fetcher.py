@@ -113,10 +113,9 @@ class RelationFetcher:
         print(f"Fetching {len(self.wikidata_ids)} entities.")
         await asyncio.gather(*map(
             lambda x: self.get_relations(self.wikidata_ids[x: min(x + self.entities_per_query, len(self.wikidata_ids))],
-                                         relations_entity_map), range(0, len(self.wikidata_ids),self.entities_per_query)))
+                                         relations_entity_map),
+            range(0, len(self.wikidata_ids), self.entities_per_query)))
         return relations_entity_map
 
     def __del__(self):
         self.redis.save()
-
-
