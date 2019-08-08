@@ -1,5 +1,6 @@
 import csv
 import os
+import re
 
 from abc import ABC, abstractmethod
 
@@ -124,7 +125,7 @@ class OutlierTaskCreator(TaskCreator):
                 if outlier_exists:
                     for entity in current_node.values:
                         break
-                    wikidata_id = HierarchyTraversal.extract_wikidata_id(entity.value)
+                    wikidata_id = HierarchyTraversal.extract_wikidata_id(l.value)
                     return wikidata_id
                 else:
                     return None
@@ -142,6 +143,24 @@ class OutlierTaskCreator(TaskCreator):
         return None
 
 
+class GetEntitiesTaskCreator(TaskCreator):
+
+    def __init__(self, output_dir):
+        super().__init__(output_dir)
+        self._PREFIX = "tags"
+
+    def process_node(self, path, node, entities, is_predicate):
+        if is_predicate:
+            return
+
+        content = []
+
+        for entity in node.values:
+            content.append([HierarchyTraversal.extract_wikidata_id(entity.value)])
+
+        TaskCreator.save_to_file(self.filename_from_path(path), content)
+
+
 class AnalogyTaskCreator(TaskCreator):
 
     def __init__(self, output_dir, wikidata_ids):
@@ -149,6 +168,7 @@ class AnalogyTaskCreator(TaskCreator):
         self._PREFIX = TaskCreator.ANOLOGY_TASK_PREFIX
         self._HEADER = ["a", "b"]
         self.wikidata_id_set = set(wikidata_ids)
+        self._is_entity_pattern = re.compile("^Q[0-9]+$")
 
     def process_node(self, path, node, entities, is_predicate):
         if not is_predicate:
@@ -167,7 +187,8 @@ class AnalogyTaskCreator(TaskCreator):
         for child in node.children:
             child_predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
             child_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
-            if child_object[0] != "Q":
+
+            if not self._is_entity_pattern(child_object):
                 continue
             if int(child_object[1:]) not in self.wikidata_id_set:
                 continue
