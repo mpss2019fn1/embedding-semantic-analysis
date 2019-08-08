@@ -2,6 +2,7 @@ import csv
 
 from collections import Counter
 from functools import lru_cache
+from heapq import heappush, heappushpop, nlargest
 from pathlib import Path
 
 from wikidata_endpoint import WikidataEndpoint, WikidataEndpointConfiguration
@@ -49,17 +50,32 @@ class RelationSelector:
         return self.metric_data_frame.loc[self.metric_data_frame['score'].idxmax()]['predicate']
 
     @metric
-    def predicate_popularity(self):
+    def popularity(self):
         """
         :return: mapping from predicate to proportion of entities, which have a outgoing edge with this predicate
         """
         result = dict()
+        number_entities = len(set().union(*self.property_mapping.values()))
         for predicate, objects in self.relation_groups().items():
             predicate_objects = set()
             for object_ in objects:
                 predicate_objects = predicate_objects.union(self.property_mapping[(predicate, object_)])
-            result[predicate] = len(predicate_objects)
-        return Counter(result)
+            result[predicate] = len(predicate_objects) / number_entities
+        return result
+
+    @metric
+    def big_groups(self, number_of_big_groups=3):
+        result = dict()
+        for predicate, objects in self.relation_groups().items():
+            heap = []
+            total_sum = 0
+            for object_ in objects:
+                group_size = len(self.property_mapping[(predicate, object_)])
+                total_sum += group_size
+                heappushpop(heap, group_size) if len(heap) > number_of_big_groups else heappush(heap, group_size)
+            big_groups_sum = sum(nlargest(number_of_big_groups, heap))
+            result[predicate] = big_groups_sum / total_sum
+        return result
 
     def relation_groups(self):
         """
