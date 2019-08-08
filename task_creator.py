@@ -12,6 +12,7 @@ class TaskCreator(ABC):
     ANOLOGY_TASK_PREFIX = "analogy"
     NEIGHBORHOOD_TASK_PREFIX = "neighborhood"
     OUTLIER_TASK_PREFIX = "outlier"
+    ENTITY_COLLECTOR_TASK_PREFIX = "entities"
 
     def __init__(self, output_dir):
         self._PREFIX = ""
@@ -55,6 +56,7 @@ class NeighborhoodTaskCreator(TaskCreator):
         super().__init__(output_dir)
         self._HEADER = ["entity", "group_id", "is_similar"]
         self._PREFIX = TaskCreator.NEIGHBORHOOD_TASK_PREFIX
+        self._MAX_NEIGHBORHOOD_SIZE = 10
 
     def process_node(self, path, node, entities, is_predicate):
         cluster_id = 0
@@ -64,6 +66,8 @@ class NeighborhoodTaskCreator(TaskCreator):
 
         for entity in entities:
             content.append([entity, cluster_id, is_similar])
+            if len(content) == self._MAX_NEIGHBORHOOD_SIZE:
+                cluster_id += 1
 
         if len(content) > 2:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
@@ -143,14 +147,17 @@ class OutlierTaskCreator(TaskCreator):
         return None
 
 
-class GetEntitiesTaskCreator(TaskCreator):
+class EntityCollectorTaskCreator(TaskCreator):
 
     def __init__(self, output_dir):
         super().__init__(output_dir)
-        self._PREFIX = "tags"
+        self._PREFIX = TaskCreator.ENTITY_COLLECTOR_TASK_PREFIX
 
     def process_node(self, path, node, entities, is_predicate):
         if is_predicate:
+            return
+
+        if node.is_leaf():
             return
 
         content = []

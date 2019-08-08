@@ -40,6 +40,7 @@ class Category:
     enabled: bool
     categories: dict
     tasks: list
+    entities: str
 
     def to_yaml_entry(self):
 
@@ -56,6 +57,7 @@ class Category:
         yaml_dict["enabled"] = self.enabled
         yaml_dict["tasks"] = task_entries
         yaml_dict["categories"] = category_entries
+        yaml_dict["entities"] = self.entities
 
         return {"category": yaml_dict}
 
@@ -97,7 +99,7 @@ class EvaluationSetConfigGenerator:
 
     @staticmethod
     def build_category_tree(root_dir):
-        root_category = Category(name="root", enabled=True, categories={}, tasks=[])
+        root_category = Category(name="root", enabled=True, categories={}, tasks=[], entities="")
         # dict_hierarchy = dict()
         for root, dirs, files in os.walk(root_dir, topdown=False):
             for file in files:
@@ -112,7 +114,8 @@ class EvaluationSetConfigGenerator:
                         category_key = split_path[i]
                         current_category = previous_category.categories.get(category_key, None)
                         if current_category is None:
-                            current_category = Category(name=category_key, enabled=True, categories={}, tasks=[])
+                            current_category = Category(name=category_key, enabled=True, categories={}, tasks=[],
+                                                        entities="")
                             previous_category.categories[category_key] = current_category
                         previous_category = current_category
 
@@ -120,22 +123,30 @@ class EvaluationSetConfigGenerator:
                     task_name = filename.split('_')[1]
                     key = filename.split('_')[1]
 
+                    tasks = []
+                    all_entities_file = ""
                     if TaskCreator.OUTLIER_TASK_PREFIX in file:
                         tasks = EvaluationSetConfigGenerator.create_outlier_tasks(task_name, path)
                     elif TaskCreator.NEIGHBORHOOD_TASK_PREFIX in file:
                         tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(task_name, path)
                     elif TaskCreator.ANOLOGY_TASK_PREFIX in file:
                         tasks = EvaluationSetConfigGenerator.create_analogy_task(task_name, path)
+                    elif TaskCreator.ENTITY_COLLECTOR_TASK_PREFIX in file:
+                        all_entities_file = path
                     else:
                         continue
 
                     # Kategorie, zu der das testset hinzugefügt werden soll
                     deepest_category = previous_category.categories.get(key, None)
                     if deepest_category is None:
-                        deepest_category = Category(name=key, enabled=True, categories={}, tasks=tasks)
+                        deepest_category = Category(name=key, enabled=True, categories={}, tasks=tasks,
+                                                    entities=all_entities_file)
                         previous_category.categories[key] = deepest_category
                     else:
-                        previous_category.categories[key].tasks.extend(tasks)
+                        if len(tasks) > 0:
+                            previous_category.categories[key].tasks.extend(tasks)
+                        if len(all_entities_file) > 0:
+                            previous_category.categories[key].entities = all_entities_file
 
         return root_category
 
