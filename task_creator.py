@@ -129,7 +129,7 @@ class OutlierTaskCreator(TaskCreator):
                 if outlier_exists:
                     for entity in current_node.values:
                         break
-                    wikidata_id = HierarchyTraversal.extract_wikidata_id(l.value)
+                    wikidata_id = HierarchyTraversal.extract_wikidata_id(entity.value)
                     return wikidata_id
                 else:
                     return None
@@ -195,7 +195,7 @@ class AnalogyTaskCreator(TaskCreator):
             child_predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
             child_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
 
-            if not self._is_entity_pattern(child_object):
+            if not self._is_entity_pattern.match(child_object):
                 continue
             if int(child_object[1:]) not in self.wikidata_id_set:
                 continue
