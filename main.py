@@ -4,7 +4,7 @@ import pickle
 from argparse import ArgumentParser
 from pathlib import Path
 
-from hierachy_builder import HierachyBuilder
+from hierarchy_builder import HierarchyBuilder
 from hierarchy_traversal import HierarchyTraversal
 from relation_fetcher import RelationFetcher
 from relation_selector import RelationSelector
@@ -21,6 +21,7 @@ def setup_arguments(parser):
     parser.add_argument('--output-dir', type=str, required=True)
     parser.add_argument('--top-count', type=int, required=False, default=float('inf'))
     parser.add_argument('--entities-per-query', type=int, required=False, default=250)
+    parser.add_argument('--relation-selection-config', type=Path, required=True)
 
 
 def read_ids_from_linking_file(filename, rows_to_read):
@@ -53,15 +54,8 @@ async def main():
     else:
         relation_fetcher = RelationFetcher(wikidata_ids, args.entities_per_query)
         relation_mapping = await relation_fetcher.fetch()
-    relation_selector = RelationSelector(relation_mapping)
-
-    # relation_selector.remove_unique_relations()
-    # print(len(relation_selector.property_mapping))
-    # relation_selector.remove_rare_relations(0.1)
-    # print(len(relation_selector.property_mapping))
-    # relation_selector.remove_overlapping_relation_groups()
-    # print(len(relation_selector.property_mapping))
-    hierachy_builder = HierachyBuilder(relation_selector.property_mapping, relation_selector.relation_groups())
+    relation_selector = RelationSelector(relation_mapping, args.relation_selection_config)
+    hierachy_builder = HierarchyBuilder(relation_selector)
     hierachy_builder.build()
     hierachy_builder.save_to_file('hierarchy_leaf_data.csv')
 

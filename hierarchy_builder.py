@@ -21,10 +21,11 @@ class Node:
         return len(self.children) == 0 or len(self.values) <= 15
 
 
-class HierachyBuilder:
-    def __init__(self, property_mapping, relation_groups):
-        self.property_mapping = property_mapping
-        self.relation_groups = relation_groups
+class HierarchyBuilder:
+    def __init__(self, relation_selector):
+        self.relation_selector = relation_selector
+        self.property_mapping = relation_selector.property_mapping
+        self.relation_groups = relation_selector.relation_groups
         self.root_node = Node('root',
                               {relation_source for sublist in self.property_mapping.values() for relation_source in
                                sublist}, [], is_root=True)
@@ -54,7 +55,7 @@ class HierachyBuilder:
                                   len(property_group) > 0}
         if len(local_property_mapping) < 1:
             return
-        relation_selector = RelationSelector(local_property_mapping)
+        relation_selector = RelationSelector(local_property_mapping, self.relation_selector.metric_config_path)
         relation = relation_selector.top_property(not_include=node.splits)
         if not relation:
             return
