@@ -123,8 +123,6 @@ class EvaluationSetConfigGenerator:
                     task_name = filename.split('_')[1]
                     key = filename.split('_')[1]
 
-                    tasks = []
-                    all_entities_file = ""
                     if TaskCreator.OUTLIER_TASK_PREFIX in file:
                         tasks = EvaluationSetConfigGenerator.create_outlier_tasks(task_name, path)
                     elif TaskCreator.NEIGHBORHOOD_TASK_PREFIX in file:
@@ -132,7 +130,12 @@ class EvaluationSetConfigGenerator:
                     elif TaskCreator.ANOLOGY_TASK_PREFIX in file:
                         tasks = EvaluationSetConfigGenerator.create_analogy_task(task_name, path)
                     elif TaskCreator.ENTITY_COLLECTOR_TASK_PREFIX in file:
-                        all_entities_file = path
+                        # hole Kategorie, zu der entity file gehört.
+                        category_to_key = previous_category.categories.get(key, None)
+                        assert category_to_key is not None
+                        # setze entities file für alle sub categories und der ebene darunter.
+                        EvaluationSetConfigGenerator._set_entities_file(category_to_key, path)
+                        continue
                     else:
                         continue
 
@@ -140,15 +143,22 @@ class EvaluationSetConfigGenerator:
                     deepest_category = previous_category.categories.get(key, None)
                     if deepest_category is None:
                         deepest_category = Category(name=key, enabled=True, categories={}, tasks=tasks,
-                                                    entities=all_entities_file)
+                                                    entities="")
                         previous_category.categories[key] = deepest_category
                     else:
                         if len(tasks) > 0:
                             previous_category.categories[key].tasks.extend(tasks)
-                        if len(all_entities_file) > 0:
-                            previous_category.categories[key].entities = all_entities_file
 
         return root_category
+
+    @staticmethod
+    def _set_entities_file(parent, entities_file_path):
+        for category1 in parent.categories.values():
+            assert category1.name[0] == "P", "category1 should correspond to a property"
+            for category2 in category1.categories.values():
+                assert category2.name[0] == "Q", "category2 should correspond to an entity"
+                category2.entities = entities_file_path
+            category1.entities = entities_file_path
 
     @staticmethod
     def build_from_file_system(evaluation_data_dir, filename):
