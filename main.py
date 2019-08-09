@@ -61,7 +61,7 @@ async def main():
     hierachy_builder.save_to_file('hierarchy_leaf_data.csv')
 
     neighborhood_task_creator = NeighborhoodTaskCreator(args.output_dir)
-    outlier_task_creator = OutlierTaskCreator(args.output_dir, hierachy_builder, 2)
+    outlier_task_creator = OutlierTaskCreator(args.output_dir, hierachy_builder, 3)
     analogy_task_creator = AnalogyTaskCreator(args.output_dir, wikidata_ids)
     get_entities_task_creator = EntityCollectorTaskCreator(args.output_dir)
     HierarchyTraversal.traverse(hierachy_builder, neighborhood_task_creator)
