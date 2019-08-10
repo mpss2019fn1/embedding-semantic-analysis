@@ -1,17 +1,20 @@
 import csv
 import os
 import re
+import random
 
 from abc import ABC, abstractmethod
 
 from hierarchy_traversal import HierarchyTraversal
 
+random.seed(42)
+
 
 class TaskCreator(ABC):
-
     ANOLOGY_TASK_PREFIX = "analogy"
     NEIGHBORHOOD_TASK_PREFIX = "neighborhood"
     OUTLIER_TASK_PREFIX = "outlier"
+    ENTITY_COLLECTOR_TASK_PREFIX = "entities"
 
     def __init__(self, output_dir):
         self._PREFIX = ""
@@ -55,6 +58,7 @@ class NeighborhoodTaskCreator(TaskCreator):
         super().__init__(output_dir)
         self._HEADER = ["entity", "group_id", "is_similar"]
         self._PREFIX = TaskCreator.NEIGHBORHOOD_TASK_PREFIX
+        self._MAX_NEIGHBORHOOD_SIZE = 10
 
     def process_node(self, path, node, entities, is_predicate):
         cluster_id = 0
@@ -62,11 +66,28 @@ class NeighborhoodTaskCreator(TaskCreator):
 
         content = [self._HEADER]
 
-        for entity in entities:
+        shuffled_entities = []
+        if len(entities) > self._MAX_NEIGHBORHOOD_SIZE:
+            shuffled_entities.extend(entities)
+        else:
+            shuffled_entities = entities
+
+        for entity in shuffled_entities:
             content.append([entity, cluster_id, is_similar])
+            if (len(content) - 1) % self._MAX_NEIGHBORHOOD_SIZE == 0:
+                cluster_id += 1
 
         if len(content) > 2:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
+
+    @staticmethod
+    def _shuffle_entities(entities):
+        for i in range(0, len(entities)):
+            pos1 = random.randint(0, len(entities) - 1)
+            pos2 = random.randint(0, len(entities) - 1)
+            tmp = entities[pos2]
+            entities[pos2] = entities[pos1]
+            entities[pos1] = tmp
 
 
 class SimilarityTaskCreator(TaskCreator):
@@ -90,7 +111,6 @@ class OutlierTaskCreator(TaskCreator):
 
     def process_node(self, path, node, entities, is_predicate):
         cluster_id = 0
-        is_similar = False
 
         # node none means that we are being passed all entities to a predicate (for example: all entities having a
         # sex or gender,
@@ -102,55 +122,79 @@ class OutlierTaskCreator(TaskCreator):
 
         entities_group = []
         for entity in entities:
-
-            if len(entities_group) < self.max_group_size:
-                entities_group.append([entity, cluster_id, is_similar])
-            else:
-                entities_group.append([self.get_outlier(path), cluster_id, not is_similar])
-                content.extend(entities_group)
+            entities_group.append([entity, cluster_id, False])  # entity, group_id, is_outlier
+            if len(entities_group) == self.max_group_size - 1:
+                outlier = self.get_outlier(path)
+                if outlier:
+                    entities_group.append([outlier, cluster_id, True])  # entity, group_id, is_outlier
+                    content.extend(entities_group)
+                    cluster_id += 1
                 entities_group.clear()
-                cluster_id += 1
 
         if len(content) > 3:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
 
     def get_outlier(self, path):
         split_path = path.split('/')
-        level = 1
+        level = 1  # level of first predicate by which was split
         stack = [self.root_node]
         outlier_exists = False
         while stack:
             current_node = stack.pop()
             if current_node.is_leaf():
                 if outlier_exists:
-                    for entity in current_node.values:
-                        break
-                    wikidata_id = HierarchyTraversal.extract_wikidata_id(l.value)
+                    # select random outlier
+                    values_as_list = list(current_node.values)
+                    i = random.randint(0, len(values_as_list) - 1)
+                    wikidata_id = HierarchyTraversal.extract_wikidata_id(values_as_list[i].value)
                     return wikidata_id
                 else:
                     return None
 
-            for child in current_node.children:
-                rdf_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
-                if level + 1 >= len(split_path) or rdf_object != split_path[level+1]:
-                    outlier_exists = True
-                    stack.append(child)
-                    break
+            # try to select a child along a different path
+            # select random child with object != split_path[level + 1]
+            object_to_exclude = ""
+            if level < len(split_path):
+                object_to_exclude = split_path[level + 1]  # object in path
+            child, on_different_path = OutlierTaskCreator._select_random_child(current_node, object_to_exclude)
+            outlier_exists = outlier_exists or on_different_path
+            stack.append(child)
 
-            if not stack and outlier_exists:
-                stack.append(current_node.children[0])
             level += 2
-        return None
+
+        raise Exception("This line should never be reached")
+
+    @staticmethod
+    def _select_random_child(node, object_to_exclude):
+        child_count = len(node.children)
+        assert child_count > 0, "node must have at least one child"
+
+        rdf_objects = [HierarchyTraversal.extract_wikidata_id(child.label[1].value) for child in node.children]
+
+        selected_index = -1
+
+        if child_count == 1:
+            selected_index = 0
+        else:
+            while selected_index < 0:
+                i = random.randint(0, child_count - 1)
+                if rdf_objects[i] != object_to_exclude:
+                    selected_index = i
+
+        return node.children[selected_index], rdf_objects[selected_index] != object_to_exclude
 
 
-class GetEntitiesTaskCreator(TaskCreator):
+class EntityCollectorTaskCreator(TaskCreator):
 
     def __init__(self, output_dir):
         super().__init__(output_dir)
-        self._PREFIX = "tags"
+        self._PREFIX = TaskCreator.ENTITY_COLLECTOR_TASK_PREFIX
 
     def process_node(self, path, node, entities, is_predicate):
         if is_predicate:
+            return
+
+        if node.is_leaf():
             return
 
         content = []
@@ -169,6 +213,7 @@ class AnalogyTaskCreator(TaskCreator):
         self._HEADER = ["a", "b"]
         self.wikidata_id_set = set(wikidata_ids)
         self._is_entity_pattern = re.compile("^Q[0-9]+$")
+        self._MAX_ENTITIES_PER_OBJECT = 5
 
     def process_node(self, path, node, entities, is_predicate):
         if not is_predicate:
@@ -182,21 +227,34 @@ class AnalogyTaskCreator(TaskCreator):
         # Also muss ich ggf. alle Males selektieren
         # bekomme ich das leichter hin an einer anderen Stelle? Ich denke nicht.
 
-        anology_test_set = [self._HEADER]
+        object_subjects = dict()
 
         for child in node.children:
             child_predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
+            if child_predicate != predicate:
+                continue
             child_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
 
-            if not self._is_entity_pattern(child_object):
+            # match to pattern Q[0-9]+
+            if not self._is_entity_pattern.match(child_object):
                 continue
             if int(child_object[1:]) not in self.wikidata_id_set:
                 continue
 
-            if child_predicate == predicate:
-                for entity in child.values:
-                    anology_test_set.append([HierarchyTraversal.extract_wikidata_id(entity.value),
-                                             HierarchyTraversal.extract_wikidata_id(child_object)])
+            for entity in child.values:
+                subjects = object_subjects.get(child_object, None)
+                if not subjects:
+                    subjects = []
+                    object_subjects[child_object] = subjects
+                subjects.append(HierarchyTraversal.extract_wikidata_id(entity.value))
 
-        if len(anology_test_set) > 2:
-            self.save_to_file(self.filename_from_path(path), anology_test_set)
+        # select at most self._MAX_ENTITIES_PER_OBJECT entities
+        analogy_test_set = [self._HEADER]
+        for object_, subjects in object_subjects.items():
+            start_index = random.randint(0, len(subjects) - 1)
+            start_index = max(0, start_index - self._MAX_ENTITIES_PER_OBJECT)
+            for i in range(start_index, min(start_index + self._MAX_ENTITIES_PER_OBJECT, len(subjects))):
+                analogy_test_set.append([subjects[i], object_])
+
+        if len(analogy_test_set) > 2:
+            self.save_to_file(self.filename_from_path(path), analogy_test_set)

@@ -72,9 +72,7 @@ class HierarchyBuilder:
         # dfs
         print("HERE I AM")
         file_data = {}
-        stack = []
-        stack.append(self.root_node)
-        cluster_id = 0
+        stack = [self.root_node]
         while stack:
             current_node = stack.pop()
             # print(current_node.values)
