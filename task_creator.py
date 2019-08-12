@@ -54,7 +54,31 @@ class TaskCreator(ABC):
 
     @staticmethod
     def get_node(root_node, path):
-        pass
+        """
+            Traverses the path from the given node
+        :param root_node: must be root node of graph
+        :param path: path to traverse from root node
+        :return: None, if node could not be found
+        """
+        split_path = path.split("/")
+        stack = [root_node]
+        level = 1
+        while stack:
+            node = stack.pop()
+            for child in node.children:
+                predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
+                object_ = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
+
+                if predicate == split_path[level] and object_ == split_path[level+1]:
+                    stack.append(child)
+                    break
+            if not stack:
+                return None
+            if level + 1 == len(split_path):
+                return stack.pop()
+            level += 2
+
+        return None
 
 
 class NeighborhoodTaskCreator(TaskCreator):
@@ -135,7 +159,6 @@ class SimilarityTaskCreator(TaskCreator):
 
         if len(content) > 2:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
-
 
     def get_similarity_node(self, upper_path_list, lower_path_list):
         level = 1
