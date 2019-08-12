@@ -11,7 +11,7 @@ random.seed(42)
 
 
 class TaskCreator(ABC):
-    ANOLOGY_TASK_PREFIX = "analogy"
+    ANALOGY_TASK_PREFIX = "analogy"
     NEIGHBORHOOD_TASK_PREFIX = "neighborhood"
     OUTLIER_TASK_PREFIX = "outlier"
     SIMILARITY_TASK_PREFIX = "similarity"
@@ -61,20 +61,35 @@ class TaskCreator(ABC):
         :return: None, if node could not be found
         """
         split_path = path.split("/")
+        return TaskCreator.get_node_split_path(root_node, split_path)
+
+    @staticmethod
+    def get_node_split_path(root_node, split_path):
+        """
+            Traverses the path from the given node
+        :param root_node: must be root node of graph
+        :param path: path to traverse from root node
+        :return: None, if node could not be found
+        """
         stack = [root_node]
         level = 1
+
+        assert split_path[0] == "root", "split_path must start at root"
+        if len(split_path) == 1:
+            return root_node
+
         while stack:
             node = stack.pop()
             for child in node.children:
                 predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
                 object_ = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
 
-                if predicate == split_path[level] and object_ == split_path[level+1]:
+                if predicate == split_path[level] and object_ == split_path[level + 1]:
                     stack.append(child)
                     break
             if not stack:
                 return None
-            if level + 1 == len(split_path):
+            if level + 2 == len(split_path):
                 return stack.pop()
             level += 2
 
@@ -146,46 +161,18 @@ class SimilarityTaskCreator(TaskCreator):
         content.append([entity1, entity2, group_id, rank])
         split_path = path.split('/')
         path_length = len(split_path)
+        child = node
         for i in range(2, path_length, 2):
             rank += 1
-            upper_path_list = split_path[:path_length - i]
-            # get node up to upper path
-            # subtract current node
-            lower_path_list = split_path[path_length - i + 1: path_length]
-            node = self.get_similarity_node(upper_path_list, lower_path_list)
-            if node:
-                entity2 = HierarchyTraversal.extract_wikidata_id(node.element_at(0).value)
+            parent = TaskCreator.get_node_split_path(self.root_node, split_path[:path_length - i])
+            entity_diff_set = parent.values - child.values
+            if entity_diff_set:
+                entity2 = HierarchyTraversal.extract_wikidata_id(next(iter(entity_diff_set)).value)
                 content.append([entity1, entity2, group_id, rank])
+            child = parent
 
         if len(content) > 2:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
-
-    def get_similarity_node(self, upper_path_list, lower_path_list):
-        level = 1
-        stack = [self.root_node]
-        while stack:
-            if level >= len(upper_path_list):
-                break
-            current_node = stack.pop()
-            for child in current_node.children:
-                child_predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
-                child_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
-                if child_predicate == upper_path_list[level] and child_object == upper_path_list[level + 1]:
-                    stack.append(child)
-                    level += 2
-                    break
-
-        lower_path_object_set = set(lower_path_list[::2])
-        while stack:
-            current_node = stack.pop()
-            if current_node.is_leaf():
-                return current_node
-            for child in current_node.children:
-                child_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
-                if child_object not in lower_path_object_set:
-                    stack.append(child)
-
-        return None
 
 
 class OutlierTaskCreator(TaskCreator):
@@ -297,7 +284,7 @@ class AnalogyTaskCreator(TaskCreator):
 
     def __init__(self, output_dir, wikidata_ids):
         super().__init__(output_dir)
-        self._PREFIX = TaskCreator.ANOLOGY_TASK_PREFIX
+        self._PREFIX = TaskCreator.ANALOGY_TASK_PREFIX
         self._HEADER = ["a", "b"]
         self.wikidata_id_set = set(wikidata_ids)
         self._is_entity_pattern = re.compile("^Q[0-9]+$")
