@@ -52,6 +52,10 @@ class TaskCreator(ABC):
 
         return os.path.join(self._output_dir, path)
 
+    @staticmethod
+    def get_node(root_node, path):
+        pass
+
 
 class NeighborhoodTaskCreator(TaskCreator):
 
@@ -121,6 +125,8 @@ class SimilarityTaskCreator(TaskCreator):
         for i in range(2, path_length, 2):
             rank += 1
             upper_path_list = split_path[:path_length - i]
+            # get node up to upper path
+            # subtract current node
             lower_path_list = split_path[path_length - i + 1: path_length]
             node = self.get_similarity_node(upper_path_list, lower_path_list)
             if node:
@@ -129,6 +135,7 @@ class SimilarityTaskCreator(TaskCreator):
 
         if len(content) > 2:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
+
 
     def get_similarity_node(self, upper_path_list, lower_path_list):
         level = 1
