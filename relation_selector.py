@@ -46,6 +46,7 @@ class RelationSelector:
         return self.metric_data_frame.loc[self.metric_data_frame['score'].idxmax()]['predicate']
 
     @metric
+    @lru_cache(maxsize=None)
     def popularity(self, predicate) -> float:
         objects = self.relation_groups()[predicate]
         predicate_objects = set()
@@ -64,6 +65,17 @@ class RelationSelector:
             heappushpop(heap, group_size) if len(heap) > number_of_big_groups else heappush(heap, group_size)
         big_groups_sum = sum(nlargest(number_of_big_groups, heap))
         return big_groups_sum / total_sum
+
+    @metric
+    def non_overlapping(self, predicate) -> float:
+        return len(self.non_overlapping_entities(predicate)) / (self.number_entities * self.popularity(predicate))
+
+    def non_overlapping_entities(self, predicate):
+        result = set()
+        relation_groups = self.relation_groups()[predicate]
+        for object_ in relation_groups:
+            result = result.symmetric_difference(self.property_mapping[(predicate, object_)])
+        return result
 
     @lru_cache(maxsize=None)
     def relation_groups(self):
