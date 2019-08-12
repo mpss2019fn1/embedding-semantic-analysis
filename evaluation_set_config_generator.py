@@ -128,6 +128,8 @@ class EvaluationSetConfigGenerator:
                     elif TaskCreator.NEIGHBORHOOD_TASK_PREFIX in file:
                         tasks = EvaluationSetConfigGenerator.create_neighborhood_tasks(task_name, path)
                     elif TaskCreator.ANOLOGY_TASK_PREFIX in file:
+                        tasks = EvaluationSetConfigGenerator.create_similarity_tasks(task_name, path)
+                    elif TaskCreator.SIMILARITY_TASK_PREFIX in file:
                         tasks = EvaluationSetConfigGenerator.create_analogy_task(task_name, path)
                     elif TaskCreator.ENTITY_COLLECTOR_TASK_PREFIX in file:
                         # hole Kategorie, zu der entity file gehört.

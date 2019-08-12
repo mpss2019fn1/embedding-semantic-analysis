@@ -20,6 +20,13 @@ class Node:
     def is_leaf(self):
         return len(self.children) == 0 or len(self.values) <= 15
 
+    def element_at(self, index):
+        for value in self.values:
+            index -= 1
+            if index < 0:
+                return value
+        return None
+
 
 class HierarchyBuilder:
     def __init__(self, relation_selector):

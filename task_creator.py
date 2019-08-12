@@ -14,6 +14,7 @@ class TaskCreator(ABC):
     ANOLOGY_TASK_PREFIX = "analogy"
     NEIGHBORHOOD_TASK_PREFIX = "neighborhood"
     OUTLIER_TASK_PREFIX = "outlier"
+    SIMILARITY_TASK_PREFIX = "similarity"
     ENTITY_COLLECTOR_TASK_PREFIX = "entities"
 
     def __init__(self, output_dir):
@@ -92,12 +93,69 @@ class NeighborhoodTaskCreator(TaskCreator):
 
 class SimilarityTaskCreator(TaskCreator):
 
-    def __init__(self, output_dir):
-        super.__init__(output_dir)
-        self._PREFIX = "similarity"
+    def __init__(self, output_dir, hierarchy):
+        super().__init__(output_dir)
+        self._HEADER = ["a", "b", "group_id", "rank"]
+        self._PREFIX = TaskCreator.SIMILARITY_TASK_PREFIX
+        self.root_node = hierarchy.root_node
 
     def process_node(self, path, node, entities, is_predicate):
-        pass
+        group_id = 0
+        rank = 0
+
+        if is_predicate:
+            return
+
+        if not node.is_leaf():
+            return
+
+        if len(node.values) < 2:
+            return
+
+        content = [self._HEADER]
+        entity1 = HierarchyTraversal.extract_wikidata_id(node.element_at(0).value)
+        entity2 = HierarchyTraversal.extract_wikidata_id(node.element_at(1).value)
+        content.append([entity1, entity2, group_id, rank])
+        split_path = path.split('/')
+        path_length = len(split_path)
+        for i in range(2, path_length, 2):
+            rank += 1
+            upper_path_list = split_path[:path_length - i]
+            lower_path_list = split_path[path_length - i + 1: path_length]
+            node = self.get_similarity_node(upper_path_list, lower_path_list)
+            if node:
+                entity2 = HierarchyTraversal.extract_wikidata_id(node.element_at(0).value)
+                content.append([entity1, entity2, group_id, rank])
+
+        if len(content) > 2:
+            TaskCreator.save_to_file(self.filename_from_path(path), content)
+
+    def get_similarity_node(self, upper_path_list, lower_path_list):
+        level = 1
+        stack = [self.root_node]
+        while stack:
+            if level >= len(upper_path_list):
+                break
+            current_node = stack.pop()
+            for child in current_node.children:
+                child_predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
+                child_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
+                if child_predicate == upper_path_list[level] and child_object == upper_path_list[level + 1]:
+                    stack.append(child)
+                    level += 2
+                    break
+
+        lower_path_object_set = set(lower_path_list[1::2])
+        while stack:
+            current_node = stack.pop()
+            if current_node.is_leaf():
+                return current_node
+            for child in current_node.children:
+                child_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
+                if child_object not in lower_path_object_set:
+                    stack.append(child)
+
+        return None
 
 
 class OutlierTaskCreator(TaskCreator):
