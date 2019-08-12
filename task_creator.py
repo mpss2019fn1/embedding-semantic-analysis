@@ -145,7 +145,7 @@ class SimilarityTaskCreator(TaskCreator):
                     level += 2
                     break
 
-        lower_path_object_set = set(lower_path_list[1::2])
+        lower_path_object_set = set(lower_path_list[::2])
         while stack:
             current_node = stack.pop()
             if current_node.is_leaf():
