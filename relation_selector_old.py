@@ -5,7 +5,6 @@ from pathlib import Path
 import logging
 
 from wikidata_endpoint import WikidataEndpoint, WikidataEndpointConfiguration
-from wikidata_endpoint.return_types import UriReturnType
 
 import pandas as pd
 
@@ -87,7 +86,7 @@ class RelationSelector:
     def remove_rare_relations(self, threshold):
         for relation in self.group_counter():
             properties = {key: value for key, value in self.property_mapping.items() if key[0] == relation}
-            count = sum(len(relation_targets) for property, relation_targets in properties.items())
+            count = sum(len(relation_targets) for _, relation_targets in properties.items())
             if count < threshold * self.number_entities:
                 for key in properties:
                     self.property_mapping.pop(key, None)

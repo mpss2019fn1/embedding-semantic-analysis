@@ -81,19 +81,19 @@ class RelationFetcher:
     async def get_relations(self, wikidata_ids, relations_map):
 
         cached_ids = set()
-        for id in wikidata_ids:
-            subject = f"http://www.wikidata.org/entity/Q{id}"
+        for id_ in wikidata_ids:
+            subject = f"http://www.wikidata.org/entity/Q{id_}"
             relations = self.redis.get(subject)
             if relations:
                 for predicate, object_ in relations:
                     relations_map[(UriReturnType(predicate), UriReturnType(object_))].add(
                         UriReturnType(subject))
-                cached_ids.add(id)
+                cached_ids.add(id_)
 
         joined_ids = ""
-        for id in wikidata_ids:
-            if id not in cached_ids:
-                joined_ids += f"wd:Q{id} "
+        for id_ in wikidata_ids:
+            if id_ not in cached_ids:
+                joined_ids += f"wd:Q{id_} "
 
         if joined_ids != "":
             query = open('resources/get_relations.rq').read() % joined_ids
@@ -109,7 +109,6 @@ class RelationFetcher:
     async def fetch(self):
         self.entities_fetched = 0
         relations_entity_map = defaultdict(set)
-        # wikidata ids sollen als Liste übergeben werden
         print(f"Fetching {len(self.wikidata_ids)} entities.")
         await asyncio.gather(*map(
             lambda x: self.get_relations(self.wikidata_ids[x: min(x + self.entities_per_query, len(self.wikidata_ids))],

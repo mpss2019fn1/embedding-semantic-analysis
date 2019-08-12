@@ -12,7 +12,8 @@ class HierarchyTraversal:
             for child in node.children:
                 child_predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
                 child_object = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
-                child_entities = HierarchyTraversal._traverse(child, path + "/" + child_predicate + "/" + child_object, task_creator)
+                child_entities = HierarchyTraversal._traverse(child, path + "/" + child_predicate + "/" + child_object,
+                                                              task_creator)
                 property_entities = property_entity_dict.get(child_predicate, None)
                 if property_entities is None:
                     property_entities = []

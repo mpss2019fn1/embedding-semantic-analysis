@@ -74,8 +74,4 @@ async def main():
 
 
 if __name__ == '__main__':
-    # wikidata_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    # Fahrenheit = map(lambda x: wikidata_ids[x:x+2], range(0, 10, 2))
-    #
-    # print(list(Fahrenheit))
     asyncio.run(main())
