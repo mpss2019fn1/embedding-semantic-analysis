@@ -190,10 +190,13 @@ def setup_arguments(parser):
     parser.add_argument('--save-to-config', type=str, required=True)
 
 
-if __name__ == '__main__':
+def main():
     parser = ArgumentParser()
     setup_arguments(parser)
     args = parser.parse_args()
 
-    # EvaluationSetConfigGenerator.build_from_file_system('__living_people_10000__')
     EvaluationSetConfigGenerator.build_from_file_system(args.evaluation_data_dir, args.save_to_config)
+
+
+if __name__ == '__main__':
+    main()

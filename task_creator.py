@@ -93,7 +93,7 @@ class NeighborhoodTaskCreator(TaskCreator):
 class SimilarityTaskCreator(TaskCreator):
 
     def __init__(self, output_dir):
-        super.__init__(output_dir)
+        super().__init__(output_dir)
         self._PREFIX = "similarity"
 
     def process_node(self, path, node, entities, is_predicate):
