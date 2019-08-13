@@ -3,6 +3,8 @@ import csv
 import typing
 
 import networkx as nx
+from itertools import repeat
+from multiprocessing import Pool, Manager
 
 from relation_selector import RelationSelector
 
@@ -21,6 +23,41 @@ class Node:
         return len(self.children) == 0 or len(self.values) <= 15
 
 
+def split_node_on_predicate(node, property_mapping, metric_config_path):
+    local_property_mapping = {property_: (property_group & node.values) for property_, property_group in
+                              property_mapping.items()}
+    local_property_mapping = {property_: property_group for property_, property_group in
+                              local_property_mapping.items() if
+                              len(property_group) > 0}
+    if len(local_property_mapping) < 1:
+        return
+    relation_selector = RelationSelector(local_property_mapping, metric_config_path)
+    relation = relation_selector.top_property(not_include=node.splits)
+    if not relation:
+        return
+    relation_targets = relation_selector.relation_groups()[relation]
+    if len(relation_targets) < 2:
+        return
+    next_nodes = []
+    for relation_target in relation_targets:
+        property_ = (relation, relation_target)
+        if local_property_mapping[property_] == node.values:
+            continue
+        next_nodes.append(build_node(node, property_, local_property_mapping))
+    return next_nodes
+
+
+def build_node(node, property_, property_mapping):
+    # ToDo: & node.values necessary?
+    relation_groups = property_mapping[property_] & node.values
+    if len(relation_groups) > 0:
+        child_node = Node(property_, relation_groups, [], node.splits + [property_[0]])
+        tree.add_node(str(child_node.label))
+        tree.add_edge(str(node.label), str(child_node.label))
+        node.children.append(child_node)
+        return child_node
+
+
 class HierarchyBuilder:
     def __init__(self, relation_selector):
         self.relation_selector = relation_selector
@@ -31,42 +68,13 @@ class HierarchyBuilder:
                                sublist}, [], is_root=True)
         tree.add_node(str(self.root_node.label))
 
-    def build_node(self, node, property_):
-        relation_groups = self.property_mapping[property_] & node.values
-        if len(relation_groups) > 0:
-            child_node = Node(property_, relation_groups, [], node.splits + [property_[0]])
-            tree.add_node(str(child_node.label))
-            tree.add_edge(str(node.label), str(child_node.label))
-            node.children.append(child_node)
-            return child_node
-
-    def build(self):
-        current_nodes = [self.root_node]
-        while current_nodes:
-            current_node = current_nodes.pop()
-            print(len(current_nodes))
-            current_nodes.extend(list(x for x in self.split_node_on_predicate(current_node) if x))
-
-    def split_node_on_predicate(self, node):
-        local_property_mapping = {property_: (property_group & node.values) for property_, property_group in
-                                  self.property_mapping.items()}
-        local_property_mapping = {property_: property_group for property_, property_group in
-                                  local_property_mapping.items() if
-                                  len(property_group) > 0}
-        if len(local_property_mapping) < 1:
-            return
-        relation_selector = RelationSelector(local_property_mapping, self.relation_selector.metric_config_path)
-        relation = relation_selector.top_property(not_include=node.splits)
-        if not relation:
-            return
-        relation_targets = relation_selector.relation_groups()[relation]
-        if len(relation_targets) < 2:
-            return
-        for relation_target in relation_targets:
-            property_ = (relation, relation_target)
-            if local_property_mapping[property_] == node.values:
-                continue
-            yield self.build_node(node, property_)
+    def build(self, number_processes=4):
+        nodes_to_process = [self.root_node]
+        with Pool(number_processes) as pool:
+            while len(nodes_to_process) > 0:
+                print(len(nodes_to_process))
+                next_nodes = pool.starmap(split_node_on_predicate, list(zip(nodes_to_process, repeat(self.property_mapping), repeat(self.relation_selector.metric_config_path))))
+                nodes_to_process = list(filter(None.__ne__, [item for sublist in next_nodes for item in sublist]))
 
     def save_to_file(self, filename):
         # dfs
