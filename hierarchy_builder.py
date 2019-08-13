@@ -22,6 +22,13 @@ class Node:
     def is_leaf(self):
         return len(self.children) == 0 or len(self.values) <= 15
 
+    def element_at(self, index):
+        for value in self.values:
+            index -= 1
+            if index < 0:
+                return value
+        return None
+
 
 def split_node_on_predicate(node, property_mapping, metric_config_path):
     local_property_mapping = {property_: (property_group & node.values) for property_, property_group in

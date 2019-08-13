@@ -11,9 +11,10 @@ random.seed(42)
 
 
 class TaskCreator(ABC):
-    ANOLOGY_TASK_PREFIX = "analogy"
+    ANALOGY_TASK_PREFIX = "analogy"
     NEIGHBORHOOD_TASK_PREFIX = "neighborhood"
     OUTLIER_TASK_PREFIX = "outlier"
+    SIMILARITY_TASK_PREFIX = "similarity"
     ENTITY_COLLECTOR_TASK_PREFIX = "entities"
 
     def __init__(self, output_dir):
@@ -50,6 +51,49 @@ class TaskCreator(ABC):
         path = path + self._PREFIX + "_" + filename + ".csv"
 
         return os.path.join(self._output_dir, path)
+
+    @staticmethod
+    def get_node(root_node, path):
+        """
+            Traverses the path from the given node
+        :param root_node: must be root node of graph
+        :param path: path to traverse from root node
+        :return: None, if node could not be found
+        """
+        split_path = path.split("/")
+        return TaskCreator.get_node_split_path(root_node, split_path)
+
+    @staticmethod
+    def get_node_split_path(root_node, split_path):
+        """
+            Traverses the path from the given node
+        :param root_node: must be root node of graph
+        :param path: path to traverse from root node
+        :return: None, if node could not be found
+        """
+        stack = [root_node]
+        level = 1
+
+        assert split_path[0] == "root", "split_path must start at root"
+        if len(split_path) == 1:
+            return root_node
+
+        while stack:
+            node = stack.pop()
+            for child in node.children:
+                predicate = HierarchyTraversal.extract_wikidata_id(child.label[0].value)
+                object_ = HierarchyTraversal.extract_wikidata_id(child.label[1].value)
+
+                if predicate == split_path[level] and object_ == split_path[level + 1]:
+                    stack.append(child)
+                    break
+            if not stack:
+                return None
+            if level + 2 == len(split_path):
+                return stack.pop()
+            level += 2
+
+        return None
 
 
 class NeighborhoodTaskCreator(TaskCreator):
@@ -92,12 +136,43 @@ class NeighborhoodTaskCreator(TaskCreator):
 
 class SimilarityTaskCreator(TaskCreator):
 
-    def __init__(self, output_dir):
+    def __init__(self, output_dir, hierarchy):
         super().__init__(output_dir)
-        self._PREFIX = "similarity"
+        self._HEADER = ["a", "b", "group_id", "rank"]
+        self._PREFIX = TaskCreator.SIMILARITY_TASK_PREFIX
+        self.root_node = hierarchy.root_node
 
     def process_node(self, path, node, entities, is_predicate):
-        pass
+        group_id = 0
+        rank = 0
+
+        if is_predicate:
+            return
+
+        if not node.is_leaf():
+            return
+
+        if len(node.values) < 2:
+            return
+
+        content = [self._HEADER]
+        entity1 = HierarchyTraversal.extract_wikidata_id(node.element_at(0).value)
+        entity2 = HierarchyTraversal.extract_wikidata_id(node.element_at(1).value)
+        content.append([entity1, entity2, group_id, rank])
+        split_path = path.split('/')
+        path_length = len(split_path)
+        child = node
+        for i in range(2, path_length, 2):
+            rank += 1
+            parent = TaskCreator.get_node_split_path(self.root_node, split_path[:path_length - i])
+            entity_diff_set = parent.values - child.values
+            if entity_diff_set:
+                entity2 = HierarchyTraversal.extract_wikidata_id(next(iter(entity_diff_set)).value)
+                content.append([entity1, entity2, group_id, rank])
+            child = parent
+
+        if len(content) > 2:
+            TaskCreator.save_to_file(self.filename_from_path(path), content)
 
 
 class OutlierTaskCreator(TaskCreator):
@@ -124,7 +199,7 @@ class OutlierTaskCreator(TaskCreator):
         for entity in entities:
             entities_group.append([entity, cluster_id, False])  # entity, group_id, is_outlier
             if len(entities_group) == self.max_group_size - 1:
-                outlier = self.get_outlier(path)
+                outlier = self.get_outlier(path, node)
                 if outlier:
                     entities_group.append([outlier, cluster_id, True])  # entity, group_id, is_outlier
                     content.extend(entities_group)
@@ -134,54 +209,37 @@ class OutlierTaskCreator(TaskCreator):
         if len(content) > 3:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
 
-    def get_outlier(self, path):
-        split_path = path.split('/')
-        level = 1  # level of first predicate by which was split
-        stack = [self.root_node]
-        outlier_exists = False
-        while stack:
-            current_node = stack.pop()
-            if current_node.is_leaf():
-                if outlier_exists:
-                    # select random outlier
-                    values_as_list = list(current_node.values)
-                    i = random.randint(0, len(values_as_list) - 1)
-                    wikidata_id = HierarchyTraversal.extract_wikidata_id(values_as_list[i].value)
-                    return wikidata_id
-                else:
-                    return None
+    def get_outlier(self, path, neighborhood_node):
+        path_set = set(path.split('/')[2::2])
 
+        stack = [self.root_node]
+
+        while stack:
+            current_node = stack[-1]
+            if current_node.is_leaf():
+                # select random outlier
+                values = list(current_node.values - neighborhood_node.values)
+                if values:
+                    return HierarchyTraversal.extract_wikidata_id(values[random.randint(0, len(values) - 1)].value)
+                else:
+                    stack.pop()
+                    continue
             # try to select a child along a different path
             # select random child with object != split_path[level + 1]
-            object_to_exclude = ""
-            if level < len(split_path):
-                object_to_exclude = split_path[level + 1]  # object in path
-            child, on_different_path = OutlierTaskCreator._select_random_child(current_node, object_to_exclude)
-            outlier_exists = outlier_exists or on_different_path
-            stack.append(child)
+            random_children = OutlierTaskCreator._select_random_children(current_node, path_set)
+            if random_children:
+                stack.extend(random_children)
 
-            level += 2
-
-        raise Exception("This line should never be reached")
+        return None
 
     @staticmethod
-    def _select_random_child(node, object_to_exclude):
-        child_count = len(node.children)
-        assert child_count > 0, "node must have at least one child"
-
-        rdf_objects = [HierarchyTraversal.extract_wikidata_id(child.label[1].value) for child in node.children]
-
-        selected_index = -1
-
-        if child_count == 1:
-            selected_index = 0
-        else:
-            while selected_index < 0:
-                i = random.randint(0, child_count - 1)
-                if rdf_objects[i] != object_to_exclude:
-                    selected_index = i
-
-        return node.children[selected_index], rdf_objects[selected_index] != object_to_exclude
+    def _select_random_children(node, objects_to_exclude):
+        rdf_objects = [child for child in node.children if
+                       HierarchyTraversal.extract_wikidata_id(child.label[1].value) not in objects_to_exclude]
+        if not rdf_objects:
+            return None
+        random.shuffle(rdf_objects)
+        return rdf_objects
 
 
 class EntityCollectorTaskCreator(TaskCreator):
@@ -209,7 +267,7 @@ class AnalogyTaskCreator(TaskCreator):
 
     def __init__(self, output_dir, wikidata_ids):
         super().__init__(output_dir)
-        self._PREFIX = TaskCreator.ANOLOGY_TASK_PREFIX
+        self._PREFIX = TaskCreator.ANALOGY_TASK_PREFIX
         self._HEADER = ["a", "b"]
         self.wikidata_id_set = set(wikidata_ids)
         self._is_entity_pattern = re.compile("^Q[0-9]+$")
