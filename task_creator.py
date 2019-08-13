@@ -95,6 +95,44 @@ class TaskCreator(ABC):
 
         return None
 
+    @staticmethod
+    def get_random_entity(node, objects_to_exclude, entities_to_exclude):
+        """
+        Returns a random entity from a random leaf. The leaf is searched starting from from node
+        :param node:
+        :param objects_to_exclude: (set) Object entities along path to be excluded
+        :param entities_to_exclude: (set) Returned entity must not be in entities_to_exclude of UriReturnType
+        :return: Entity
+        """
+        stack = [node]
+
+        while stack:
+            current_node = stack[-1]
+            if current_node.is_leaf():
+                # select random outlier
+                values = list(current_node.values - entities_to_exclude)
+                if values:
+                    return HierarchyTraversal.extract_wikidata_id(values[random.randint(0, len(values) - 1)].value)
+                else:
+                    stack.pop()
+                    continue
+            # try to select a child along a different path
+            # select random child with object != split_path[level + 1]
+            random_children = TaskCreator.select_random_children(current_node, objects_to_exclude)
+            if random_children:
+                stack.extend(random_children)
+
+        return None
+
+    @staticmethod
+    def select_random_children(node, objects_to_exclude):
+        rdf_objects = [child for child in node.children if
+                       HierarchyTraversal.extract_wikidata_id(child.label[1].value) not in objects_to_exclude]
+        if not rdf_objects:
+            return None
+        random.shuffle(rdf_objects)
+        return rdf_objects
+
 
 class NeighborhoodTaskCreator(TaskCreator):
 
@@ -161,15 +199,12 @@ class SimilarityTaskCreator(TaskCreator):
         content.append([entity1, entity2, group_id, rank])
         split_path = path.split('/')
         path_length = len(split_path)
-        child = node
         for i in range(2, path_length, 2):
             rank += 1
             parent = TaskCreator.get_node_split_path(self.root_node, split_path[:path_length - i])
-            entity_diff_set = parent.values - child.values
-            if entity_diff_set:
-                entity2 = HierarchyTraversal.extract_wikidata_id(next(iter(entity_diff_set)).value)
+            entity2 = TaskCreator.get_random_entity(parent, split_path[path_length - i + 1::2], node.values)
+            if entity2:
                 content.append([entity1, entity2, group_id, rank])
-            child = parent
 
         if len(content) > 2:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
@@ -199,7 +234,7 @@ class OutlierTaskCreator(TaskCreator):
         for entity in entities:
             entities_group.append([entity, cluster_id, False])  # entity, group_id, is_outlier
             if len(entities_group) == self.max_group_size - 1:
-                outlier = self.get_outlier(path, node)
+                outlier = TaskCreator.get_random_entity(self.root_node, set(path.split("/")[2::2]), node.values)
                 if outlier:
                     entities_group.append([outlier, cluster_id, True])  # entity, group_id, is_outlier
                     content.extend(entities_group)
@@ -208,38 +243,6 @@ class OutlierTaskCreator(TaskCreator):
 
         if len(content) > 3:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
-
-    def get_outlier(self, path, neighborhood_node):
-        path_set = set(path.split('/')[2::2])
-
-        stack = [self.root_node]
-
-        while stack:
-            current_node = stack[-1]
-            if current_node.is_leaf():
-                # select random outlier
-                values = list(current_node.values - neighborhood_node.values)
-                if values:
-                    return HierarchyTraversal.extract_wikidata_id(values[random.randint(0, len(values) - 1)].value)
-                else:
-                    stack.pop()
-                    continue
-            # try to select a child along a different path
-            # select random child with object != split_path[level + 1]
-            random_children = OutlierTaskCreator._select_random_children(current_node, path_set)
-            if random_children:
-                stack.extend(random_children)
-
-        return None
-
-    @staticmethod
-    def _select_random_children(node, objects_to_exclude):
-        rdf_objects = [child for child in node.children if
-                       HierarchyTraversal.extract_wikidata_id(child.label[1].value) not in objects_to_exclude]
-        if not rdf_objects:
-            return None
-        random.shuffle(rdf_objects)
-        return rdf_objects
 
 
 class EntityCollectorTaskCreator(TaskCreator):
