@@ -5,6 +5,8 @@ import typing
 from itertools import repeat
 from multiprocessing import Pool
 
+from tqdm import tqdm
+
 from relation_selector import RelationSelector
 
 
@@ -25,6 +27,10 @@ class Node:
             if index < 0:
                 return value
         return None
+
+
+def split_node_on_predicate_tuple_arg(args):
+    return split_node_on_predicate(*args)
 
 
 def split_node_on_predicate(node, property_mapping, metric_config_path):
@@ -72,10 +78,9 @@ class HierarchyBuilder:
         nodes_to_process = [self.root_node]
         with Pool(number_processes) as pool:
             while len(nodes_to_process) > 0:
-                print(len(nodes_to_process))
-                next_nodes = pool.starmap(split_node_on_predicate, list(
+                next_nodes = list(tqdm(pool.imap(split_node_on_predicate_tuple_arg, list(
                     zip(nodes_to_process, repeat(self.property_mapping),
-                        repeat(self.relation_selector.metric_config_path))))
+                        repeat(self.relation_selector.metric_config_path)))), total=len(nodes_to_process)))
                 assert len(nodes_to_process) == len(next_nodes)
                 for parent, children in zip(nodes_to_process, next_nodes):
                     parent.children = children if children else []
