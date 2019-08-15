@@ -2,13 +2,10 @@ from attr import dataclass
 import csv
 import typing
 
-import networkx as nx
 from itertools import repeat
-from multiprocessing import Pool, Manager
+from multiprocessing import Pool
 
 from relation_selector import RelationSelector
-
-tree = nx.DiGraph()
 
 
 @dataclass
@@ -59,9 +56,6 @@ def build_node(node, property_, property_mapping):
     relation_groups = property_mapping[property_] & node.values
     if len(relation_groups) > 0:
         child_node = Node(property_, relation_groups, [], node.splits + [property_[0]])
-        tree.add_node(str(child_node.label))
-        tree.add_edge(str(node.label), str(child_node.label))
-        node.children.append(child_node)
         return child_node
 
 
@@ -73,18 +67,19 @@ class HierarchyBuilder:
         self.root_node = Node('root',
                               {relation_source for sublist in self.property_mapping.values() for relation_source in
                                sublist}, [], is_root=True)
-        tree.add_node(str(self.root_node.label))
 
     def build(self, number_processes=4):
         nodes_to_process = [self.root_node]
         with Pool(number_processes) as pool:
             while len(nodes_to_process) > 0:
                 print(len(nodes_to_process))
-                next_nodes = pool.starmap(split_node_on_predicate, list(
+                next_nodes = list(filter(None.__ne__, pool.starmap(split_node_on_predicate, list(
                     zip(nodes_to_process, repeat(self.property_mapping),
-                        repeat(self.relation_selector.metric_config_path))))
+                        repeat(self.relation_selector.metric_config_path))))))
+                for parent, children in zip(nodes_to_process, next_nodes):
+                    parent.children = children
                 nodes_to_process = list(
-                    filter(None.__ne__, [item for sublist in filter(None.__ne__, next_nodes) for item in sublist]))
+                    filter(None.__ne__, [item for sublist in next_nodes for item in sublist]))
 
     def save_to_file(self, filename):
         # dfs
