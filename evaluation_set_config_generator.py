@@ -180,6 +180,8 @@ class EvaluationSetConfigGenerator:
             [task_configuration.to_yaml_entry() for task_configuration in task_configurations]
         yaml_dict["configuration"]["categories"] = []
 
+        root_node.categories['root'].entities = os.path.join(evaluation_data_dir, "entities_root.csv")
+
         for category in root_node.categories.values():
             yaml_dict["configuration"]["categories"].append(category.to_yaml_entry())
 
