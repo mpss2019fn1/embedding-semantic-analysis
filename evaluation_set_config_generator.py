@@ -158,7 +158,7 @@ class EvaluationSetConfigGenerator:
         for category1 in parent.categories.values():
             assert category1.name[0] == "P", "category1 should correspond to a property"
             for category2 in category1.categories.values():
-                assert category2.name[0] == "Q", "category2 should correspond to an entity"
+                # assert category2.name[0] == "Q" or category2.name[0] == "M", "category2 should correspond to an entity"
                 category2.entities = entities_file_path
             category1.entities = entities_file_path
 
