@@ -73,13 +73,14 @@ class HierarchyBuilder:
         with Pool(number_processes) as pool:
             while len(nodes_to_process) > 0:
                 print(len(nodes_to_process))
-                next_nodes = list(filter(None.__ne__, pool.starmap(split_node_on_predicate, list(
+                next_nodes = pool.starmap(split_node_on_predicate, list(
                     zip(nodes_to_process, repeat(self.property_mapping),
-                        repeat(self.relation_selector.metric_config_path))))))
+                        repeat(self.relation_selector.metric_config_path))))
+                assert len(nodes_to_process) == len(next_nodes)
                 for parent, children in zip(nodes_to_process, next_nodes):
-                    parent.children = children
+                    parent.children = children if children else []
                 nodes_to_process = list(
-                    filter(None.__ne__, [item for sublist in next_nodes for item in sublist]))
+                    filter(None.__ne__, [item for sublist in filter(None.__ne__, next_nodes) for item in sublist]))
 
     def save_to_file(self, filename):
         # dfs
