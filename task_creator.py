@@ -105,16 +105,14 @@ class TaskCreator(ABC):
         :return: Entity
         """
         stack = [node]
-
         while stack:
-            current_node = stack[-1]
+            current_node = stack.pop()
             if current_node.is_leaf():
                 # select random outlier
                 values = list(current_node.values - entities_to_exclude)
                 if values:
                     return HierarchyTraversal.extract_wikidata_id(values[random.randint(0, len(values) - 1)].value)
                 else:
-                    stack.pop()
                     continue
             # try to select a child along a different path
             # select random child with object != split_path[level + 1]
