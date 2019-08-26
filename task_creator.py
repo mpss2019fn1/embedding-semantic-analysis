@@ -147,10 +147,8 @@ class NeighborhoodTaskCreator(TaskCreator):
         content = [self._HEADER]
 
         shuffled_entities = []
-        if len(entities) > self._MAX_NEIGHBORHOOD_SIZE:
-            shuffled_entities.extend(entities)
-        else:
-            shuffled_entities = entities
+        shuffled_entities.extend(entities)
+        random.shuffle(shuffled_entities)
 
         for entity in shuffled_entities:
             content.append([entity, cluster_id, is_similar])
@@ -159,15 +157,6 @@ class NeighborhoodTaskCreator(TaskCreator):
 
         if len(content) > 2:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
-
-    @staticmethod
-    def _shuffle_entities(entities):
-        for i in range(0, len(entities)):
-            pos1 = random.randint(0, len(entities) - 1)
-            pos2 = random.randint(0, len(entities) - 1)
-            tmp = entities[pos2]
-            entities[pos2] = entities[pos1]
-            entities[pos1] = tmp
 
 
 class SimilarityTaskCreator(TaskCreator):
