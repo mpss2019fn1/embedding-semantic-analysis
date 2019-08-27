@@ -59,7 +59,10 @@ async def main():
     relation_selector = RelationSelector(relation_mapping, args.relation_selection_config)
     hierachy_builder = HierarchyBuilder(relation_selector)
     hierachy_builder.build()
+    with open('hierarchy_builder.pickle', 'w') as f:
+        pickle.dump(hierachy_builder, f)
     hierachy_builder.save_to_file('hierarchy_leaf_data.csv')
+
 
     neighborhood_task_creator = NeighborhoodTaskCreator(args.output_dir)
     outlier_task_creator = OutlierTaskCreator(args.output_dir, hierachy_builder, 10)
