@@ -1,6 +1,6 @@
 SELECT DISTINCT ?subject ?wd ?ps_ WHERE {
   VALUES ?subject {
-    wd:Q142
+    %s
   }
   ?subject ?p ?statement.
   ?statement ?ps ?ps_.

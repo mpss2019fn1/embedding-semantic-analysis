@@ -14,7 +14,7 @@ from task_creator import NeighborhoodTaskCreator
 from task_creator import OutlierTaskCreator
 from task_creator import SimilarityTaskCreator
 
-PICKLE_FILE = 'people_relations.pickle'
+PICKLE_FILE = 'people_relations2.pickle'
 
 
 def setup_arguments(parser):
@@ -59,8 +59,8 @@ async def main():
     relation_selector = RelationSelector(relation_mapping, args.relation_selection_config)
     hierachy_builder = HierarchyBuilder(relation_selector)
     hierachy_builder.build()
-    with open('hierarchy_builder.pickle', 'w') as f:
-        pickle.dump(hierachy_builder, f)
+    with open('hierarchy.pickle', 'wb') as f:
+        pickle.dump(hierachy_builder.root_node, f)
     hierachy_builder.save_to_file('hierarchy_leaf_data.csv')
 
 
