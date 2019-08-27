@@ -1,11 +1,12 @@
-SELECT DISTINCT ?person ?wd ?ps_ WHERE {
-  VALUES ?person {
-    %s
+SELECT DISTINCT ?subject ?wd ?ps_ WHERE {
+  VALUES ?subject {
+    wd:Q142
   }
-  ?person ?p ?statement.
+  ?subject ?p ?statement.
   ?statement ?ps ?ps_.
   ?wd wikibase:claim ?p;
     wikibase:statementProperty ?ps.
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  FILTER NOT EXISTS {?statement pq:P582 ?end}
 }
 ORDER BY (?wd) (?statement) (?ps_)
