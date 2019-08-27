@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 
 import yaml
 import os
+import re
 
 
 @dataclass
@@ -50,7 +51,8 @@ class Category:
 
         category_entries = []
         for category in self.categories.values():
-            category_entries.append(category.to_yaml_entry())
+            if category.entities:
+                category_entries.append(category.to_yaml_entry())
 
         yaml_dict = dict()
         yaml_dict["name"] = self.name
@@ -103,7 +105,7 @@ class EvaluationSetConfigGenerator:
         # dict_hierarchy = dict()
         for root, dirs, files in os.walk(root_dir, topdown=False):
             for file in files:
-                if file.endswith('.csv'):
+                if re.match("[a-zA-Z]+_([P|Q][0-9]+|root).csv$", file):
                     path = os.path.join(root, file)
                     # path = root + '/' + file
                     print(path)

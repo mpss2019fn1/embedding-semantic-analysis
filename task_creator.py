@@ -105,16 +105,14 @@ class TaskCreator(ABC):
         :return: Entity
         """
         stack = [node]
-
         while stack:
-            current_node = stack[-1]
+            current_node = stack.pop()
             if current_node.is_leaf():
                 # select random outlier
                 values = list(current_node.values - entities_to_exclude)
                 if values:
                     return HierarchyTraversal.extract_wikidata_id(values[random.randint(0, len(values) - 1)].value)
                 else:
-                    stack.pop()
                     continue
             # try to select a child along a different path
             # select random child with object != split_path[level + 1]
@@ -149,10 +147,8 @@ class NeighborhoodTaskCreator(TaskCreator):
         content = [self._HEADER]
 
         shuffled_entities = []
-        if len(entities) > self._MAX_NEIGHBORHOOD_SIZE:
-            shuffled_entities.extend(entities)
-        else:
-            shuffled_entities = entities
+        shuffled_entities.extend(entities)
+        random.shuffle(shuffled_entities)
 
         for entity in shuffled_entities:
             content.append([entity, cluster_id, is_similar])
@@ -161,15 +157,6 @@ class NeighborhoodTaskCreator(TaskCreator):
 
         if len(content) > 2:
             TaskCreator.save_to_file(self.filename_from_path(path), content)
-
-    @staticmethod
-    def _shuffle_entities(entities):
-        for i in range(0, len(entities)):
-            pos1 = random.randint(0, len(entities) - 1)
-            pos2 = random.randint(0, len(entities) - 1)
-            tmp = entities[pos2]
-            entities[pos2] = entities[pos1]
-            entities[pos1] = tmp
 
 
 class SimilarityTaskCreator(TaskCreator):
@@ -268,13 +255,14 @@ class EntityCollectorTaskCreator(TaskCreator):
 
 class AnalogyTaskCreator(TaskCreator):
 
-    def __init__(self, output_dir, wikidata_ids):
+    def __init__(self, output_dir, wikidata_ids, max_analogies=40):
         super().__init__(output_dir)
         self._PREFIX = TaskCreator.ANALOGY_TASK_PREFIX
         self._HEADER = ["a", "b"]
         self.wikidata_id_set = set(wikidata_ids)
         self._is_entity_pattern = re.compile("^Q[0-9]+$")
         self._MAX_ENTITIES_PER_OBJECT = 5
+        self._max_analogies = max_analogies
 
     def process_node(self, path, node, entities, is_predicate):
         if not is_predicate:
@@ -310,12 +298,13 @@ class AnalogyTaskCreator(TaskCreator):
                 subjects.append(HierarchyTraversal.extract_wikidata_id(entity.value))
 
         # select at most self._MAX_ENTITIES_PER_OBJECT entities
-        analogy_test_set = [self._HEADER]
+        analogy_test_set = []
         for object_, subjects in object_subjects.items():
             start_index = random.randint(0, len(subjects) - 1)
             start_index = max(0, start_index - self._MAX_ENTITIES_PER_OBJECT)
             for i in range(start_index, min(start_index + self._MAX_ENTITIES_PER_OBJECT, len(subjects))):
                 analogy_test_set.append([subjects[i], object_])
 
-        if len(analogy_test_set) > 2:
-            self.save_to_file(self.filename_from_path(path), analogy_test_set)
+        if len(analogy_test_set) > 1:
+            random.shuffle(analogy_test_set)
+            self.save_to_file(self.filename_from_path(path), [self._HEADER] + analogy_test_set[:self._max_analogies])

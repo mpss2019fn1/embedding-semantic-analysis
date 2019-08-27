@@ -89,7 +89,7 @@ class HierarchyBuilder:
 
     def save_to_file(self, filename):
         # dfs
-        print("HERE I AM")
+        print("Saving to file")
         file_data = {}
         stack = [self.root_node]
         while stack:
@@ -99,8 +99,8 @@ class HierarchyBuilder:
                 for child in current_node.children:
                     stack.append(child)
             else:
-                print(f"labels: {current_node.label}")
-                print(f"values: {current_node.values}")
+                # print(f"labels: {current_node.label}")
+                # print(f"values: {current_node.values}")
                 file_data[current_node.label] = current_node.values
 
         w = csv.writer(open(filename, "w"))
