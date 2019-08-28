@@ -102,6 +102,7 @@ class EvaluationSetConfigGenerator:
     @staticmethod
     def build_category_tree(root_dir):
         root_category = Category(name="root", enabled=True, categories={}, tasks=[], entities="")
+        entitiy_files = []
         # dict_hierarchy = dict()
         for root, dirs, files in os.walk(root_dir, topdown=False):
             for file in files:
@@ -135,10 +136,7 @@ class EvaluationSetConfigGenerator:
                         tasks = EvaluationSetConfigGenerator.create_similarity_tasks(task_name, path)
                     elif TaskCreator.ENTITY_COLLECTOR_TASK_PREFIX in file:
                         # hole Kategorie, zu der entity file gehört.
-                        category_to_key = previous_category.categories.get(key, None)
-                        assert category_to_key is not None
-                        # setze entities file für alle sub categories und der ebene darunter.
-                        EvaluationSetConfigGenerator._set_entities_file(category_to_key, path)
+                        entitiy_files.append(path)
                         continue
                     else:
                         continue
@@ -152,6 +150,18 @@ class EvaluationSetConfigGenerator:
                     else:
                         if len(tasks) > 0:
                             previous_category.categories[key].tasks.extend(tasks)
+
+
+        # set entity files
+        for entity_file_path in entitiy_files:
+            index_of_root = entity_file_path.find("root")
+            assert index_of_root >= 0
+            split_path = entity_file_path[31:].split('/')
+            split_path[-1] = split_path[-1][9:-4]
+            category = root_category
+            for category_name in split_path:
+                category = category.categories[category_name]
+            EvaluationSetConfigGenerator._set_entities_file(category, entity_file_path)
 
         return root_category
 
