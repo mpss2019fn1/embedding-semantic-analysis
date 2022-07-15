@@ -16,7 +16,7 @@ datashader==0.7.0
 datashape==0.5.2
 decorator==4.4.0
 defusedxml==0.6.0
-distributed==2.1.0
+distributed==2021.10.0
 entrypoints==0.3
 fastparquet==0.3.1
 graphviz==0.11.1
